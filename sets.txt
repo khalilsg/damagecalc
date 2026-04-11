@@ -1,0 +1,62 @@
+Alakazam-Mega @ Alakazite [special]
+Ability: Trace
+Level: 50
+EVs: 252 SpA / 4 SpD / 252 Spe
+Timid Nature
+- Dazzling Gleam
+- Focus Blast
+- Psychic
+- Protect
+
+Basculegion (M) @ Choice Specs [physical]
+Ability: Swift Swim
+Tera Type: Ghost
+EVs: 252 Atk / 4 SpD / 252 Spe
+Jolly Nature
+- Wave Crash
+- Flip Turn
+- Psychic Fangs
+- Last Respects
+
+Sneasler @ Psychic Seed [physical]
+Ability: Unburden
+Level: 50
+Tera Type: Dark
+EVs: 4 HP / 252 Atk / 252 Spe
+Adamant Nature
+- Close Combat
+- Dire Claw
+- Fake Out
+- Protect
+
+Incineroar @ Sitrus Berry [physical]
+Ability: Intimidate
+Tera Type: Ghost
+EVs: 252 Atk / 252 Def
+Adamant Nature
+- Fake Out
+- Flare Blitz
+- Close Combat
+- Parting Shot
+
+Whimsicott @ Fairy Feather [special]
+Ability: Prankster
+Tera Type: Steel
+EVs: 252 HP / 252 SpA
+Modest Nature
+IVs: 0 Atk
+- Moonblast
+- Taunt
+- Encore
+- Tailwind
+
+Liepard
+Ability: Limber
+Level: 50
+EVs: 252 HP / 8 Def / 252 SpD
+Calm Nature
+- Protect
+- Encore
+- Foul Play
+- Protect
+

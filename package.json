@@ -1,0 +1,17 @@
+{
+  "name": "pokemon-calc",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@smogon/calc": "^0.11.0"
+  },
+  "devDependencies": {}
+}
