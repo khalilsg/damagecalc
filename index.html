@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Damage Calc</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: #00d4ff;
+      margin-bottom: 24px;
+      font-size: 1.6rem;
+      letter-spacing: 2px;
+    }
+
+    .inputs {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+      min-width: 280px;
+    }
+
+    label {
+      color: #00d4ff;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    textarea {
+      background: #16213e;
+      border: 1px solid #00d4ff44;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      padding: 12px;
+      border-radius: 6px;
+      resize: vertical;
+      height: 320px;
+      outline: none;
+    }
+
+    textarea:focus { border-color: #00d4ff; }
+
+    .defender-input-wrapper {
+      position: relative;
+    }
+
+    #defender-search {
+      background: #16213e;
+      border: 1px solid #00d4ff44;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      padding: 10px 12px;
+      border-radius: 6px;
+      width: 100%;
+      outline: none;
+    }
+
+    #defender-search:focus { border-color: #00d4ff; }
+
+    #dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #16213e;
+      border: 1px solid #00d4ff44;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    #dropdown.open { display: block; }
+
+    .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .dropdown-item:hover { background: #0f3460; color: #00d4ff; }
+
+    .selected-defenders {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+      min-height: 36px;
+    }
+
+    .defender-tag {
+      background: #0f3460;
+      border: 1px solid #00d4ff44;
+      border-radius: 4px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .defender-tag button {
+      background: none;
+      border: none;
+      color: #ff4444;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+    }
+
+    #calc-btn {
+      background: #00d4ff22;
+      border: 1px solid #00d4ff;
+      color: #00d4ff;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      padding: 12px 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: background 0.2s;
+      margin-bottom: 32px;
+    }
+
+    #calc-btn:hover { background: #00d4ff44; }
+
+    #output { display: flex; flex-direction: column; gap: 16px; }
+
+    .attacker-section { display: flex; flex-direction: column; gap: 12px; }
+
+    .attacker-header {
+      color: #00d4ff;
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      border-bottom: 1px solid #00d4ff44;
+      padding-bottom: 6px;
+    }
+
+    .matchup-cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .matchup-card {
+      background: #16213e;
+      border: 1px solid #ffffff11;
+      border-radius: 8px;
+      padding: 14px 16px;
+      min-width: 280px;
+      flex: 1;
+    }
+
+    .matchup-card h3 {
+      color: #00d4ff;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .calc-row {
+      font-size: 0.8rem;
+      padding: 3px 0;
+      line-height: 1.5;
+    }
+
+    .ko-guaranteed { color: #ff4444; font-weight: bold; }
+    .ko-chance     { color: #ff8c00; font-weight: bold; }
+    .ko-2hko       { color: #ffd700; font-weight: bold; }
+
+    .summary-section { margin-top: 32px; }
+
+    .summary-header {
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid;
+    }
+
+    .summary-header.red    { color: #ff4444; border-color: #ff444444; }
+    .summary-header.orange { color: #ff8c00; border-color: #ff8c0044; }
+    .summary-header.yellow { color: #ffd700; border-color: #ffd70044; }
+
+    .summary-row { font-size: 0.85rem; padding: 3px 0; }
+    .summary-row.red    { color: #ff4444; font-weight: bold; }
+    .summary-row.orange { color: #ff8c00; font-weight: bold; }
+    .summary-row.yellow { color: #ffd700; font-weight: bold; }
+
+    .summary-attacker-block { margin-bottom: 12px; }
+
+    .error { color: #ff4444; font-size: 0.9rem; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <h1>⚔ DAMAGE CALC</h1>
+
+  <div class="inputs">
+    <div class="input-group">
+      <label>Team (Showdown Format)</label>
+      <textarea id="team-input" placeholder="Paste your Showdown team here..."></textarea>
+    </div>
+    <div class="input-group">
+      <label>Defenders</label>
+      <div class="defender-input-wrapper">
+        <input type="text" id="defender-search" placeholder="Search Pokémon..." autocomplete="off" />
+        <div id="dropdown"></div>
+      </div>
+      <div class="selected-defenders" id="selected-defenders"></div>
+    </div>
+  </div>
+
+  <button id="calc-btn">CALCULATE</button>
+  <div id="error" class="error"></div>
+  <div id="output"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
