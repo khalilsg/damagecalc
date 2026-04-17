@@ -1,21 +1,46 @@
-# damagecalc
+# Damance Calc
+### Competitive Pokémon Analysis Engine
 
-A command-line Pokémon damage calculator for doubles battles. Given a team file in Pokémon Showdown format and a list of opposing Pokémon, it runs damage calculations for every attacker and move in the file against every defender, with color-coded output and KO summaries.
+A web-based tool for analyzing matchups in competitive Pokémon doubles. Given your team and a list of opponent threats, it calculates offense, defense, and speed matchups across multiple scenarios simultaneously — solving the "hidden information" problem of not knowing your opponent's exact EV spreads.
 
-Built on top of [@smogon/calc](https://github.com/smogon/damage-calc).
+Built on [@smogon/calc](https://github.com/smogon/damage-calc).
 
-## Requirements
+---
 
-- Node.js (LTS recommended)
-- npm
+## Live App
 
-## Installation
+https://khalilsg.github.io/damagecalc/
 
-    git clone https://github.com/khalilsg/damagecalc.git
-    cd damagecalc
-    npm install
+---
+
+## Features
+
+- Executive summary of key threats and opportunities
+- Offensive damage calcs for every move on your team vs. opponent archetypes
+- Defensive damage calcs using opponent's common moves from Smogon's dataset
+- Speed ladder showing your team vs. opponent min/max speeds and boost scenarios
+- Extended Smogon format with stat boost tags
+- Searchable opponent dropdown with Enter-to-autofill and configurable exclusions
+
+---
 
 ## Usage
+
+### Web UI
+
+    npm install
+    npm run dev
+
+Then open http://localhost:5173 in your browser.
+
+To deploy to GitHub Pages:
+
+    npm run build
+    git add .
+    git commit -m "your message"
+    git push origin main
+
+### Terminal Tool (v1)
 
     node battlecalc.js <path-to-sets.txt> <defender1> <defender2> ...
 
@@ -23,11 +48,17 @@ Example:
 
     node battlecalc.js myteam.txt Garchomp Sylveon "Iron Hands" Amoonguss
 
-## Team File Format
+---
 
-Sets use standard Pokémon Showdown export format, with one addition: a [physical], [special], or [both] tag after the item on the first line to indicate the attacker type.
+## Team Format
 
-    Alakazam-Mega @ Alakazite [special]
+Uses standard Pokémon Showdown export format with this optional additions on the first line:
+
+1. Optional stat boost tags: [+1 Atk], [+2 SpA], [-1 Spe], etc. Will test against all of these
+
+Example:
+
+    Alakazam-Mega @ Alakazite [+1 SpA] [+2 SpA]
     Ability: Trace
     Level: 50
     EVs: 252 SpA / 4 SpD / 252 Spe
@@ -37,7 +68,7 @@ Sets use standard Pokémon Showdown export format, with one addition: a [physica
     - Psychic
     - Protect
 
-    Basculegion (M) @ Choice Specs [physical]
+    Basculegion (M) @ Choice Specs
     Ability: Swift Swim
     Tera Type: Ghost
     EVs: 252 Atk / 4 SpD / 252 Spe
@@ -47,17 +78,66 @@ Sets use standard Pokémon Showdown export format, with one addition: a [physica
     - Psychic Fangs
     - Last Respects
 
-If the tag is omitted, the attacker is treated as "both".
+Pokémon with no item can still have tags:
 
-Pokémon with no item can still have the tag:
-
-    Liepard [physical]
+    Liepard
     Ability: Limber
     ...
 
-## Defender Variants
+---
 
-Each defender is tested against three EV/nature spreads:
+## Analysis Logic
+
+### Offensive Archetypes (opponent's possible defensive spreads)
+
+| Label        | EVs                  | Nature  |
+|--------------|----------------------|---------|
+| Max SpDef    | 252 HP / 252 SpD     | Calm    |
+| Max Def      | 252 HP / 252 Def     | Bold    |
+| Min Defense  | 0 HP / 0 Def / 0 SpD | Serious |
+
+Special moves are tested against Max SpDef and Min Defense.
+Physical moves are tested against Max Def and Min Defense.
+
+### Defensive Archetypes (opponent's possible offensive spreads)
+
+| Label        | EVs      | Nature  |
+|--------------|----------|---------|
+| Max SpAtk    | 252 SpA  | Modest  |
+| Max Atk      | 252 Atk  | Adamant |
+| Min Offense  | 0 Atk    | Serious |
+
+### Speed Scenarios
+
+Your Pokémon: base speed only, plus any custom boost tags (e.g. [+2 Spe]).
+Opponent: min speed (0 Spe / Serious), max speed (252 Spe / Jolly), plus scarf and tailwind variants of each.
+
+---
+
+## Name Aliases
+
+| Input      | Resolves To          |
+|------------|----------------------|
+| Pokémon-H  | Pokémon-Hisui        |
+| Pokémon-G  | Pokémon-Galar        |
+| Tauros-P   | Tauros-Paldea-Combat |
+| Tauros-B   | Tauros-Paldea-Blaze  |
+| Tauros-A   | Tauros-Paldea-Aqua   |
+| Aegislash  | Aegislash-Both       |
+
+Typos within edit distance 4 are automatically corrected.
+
+---
+
+## Dropdown Exclusions
+
+Add Pokémon names to src/exclusions.txt (one per line) to hide them from the opponent search dropdown.
+
+---
+
+## Terminal Tool (v1) Reference
+
+### Defender Variants
 
 | Label         | EVs                  | Nature  |
 |---------------|----------------------|---------|
@@ -65,42 +145,15 @@ Each defender is tested against three EV/nature spreads:
 | Defensive Def | 252 HP / 252 Def     | Bold    |
 | Neutral       | 0 HP / 0 Def / 0 SpD | Serious |
 
-If the attacker is [physical], the Defensive SpD variant is skipped. If [special], the Defensive Def variant is skipped.
+### Moves Skipped by Default
 
-## Name Aliases
-
-The following shorthand names are supported:
-
-| Input       | Resolves To           |
-|-------------|-----------------------|
-| Pokémon-H   | Pokémon-Hisui         |
-| Pokémon-G   | Pokémon-Galar         |
-| Tauros-P    | Tauros-Paldea-Combat  |
-| Tauros-B    | Tauros-Paldea-Blaze   |
-| Tauros-A    | Tauros-Paldea-Aqua    |
-| Aegislash   | Aegislash-Both        |
-
-Fuzzy name matching is also supported — typos within an edit distance of 4 are automatically corrected.
-
-## Output
-
-Results are grouped by matchup (attacker vs. defender), with all moves shown per matchup. Output is color-coded:
-
-- Cyan — matchup headers
-- Red — guaranteed OHKOs
-- Orange — chance OHKOs
-- Yellow — guaranteed or >50% chance 2HKOs
-
-At the end, three summary sections are printed:
-
-- >25% chance to 2HKO (yellow)
-- Non-guaranteed OHKOs (orange)
-- Guaranteed OHKOs (red)
-
-## Moves to Skip
-
-The following moves are skipped by default and produce no output:
-:q
 Protect, Wide Guard, Quick Guard, Parting Shot, Taunt, Encore, Tailwind
 
-To add more, edit the MOVES_TO_SKIP array in battlecalc.js.
+Edit MOVES_TO_SKIP in battlecalc.js to change this list.
+
+### Output Colors
+
+- Red: guaranteed OHKO
+- Orange: chance OHKO
+- Yellow: guaranteed or >50% chance 2HKO
+ENDOFFILE
