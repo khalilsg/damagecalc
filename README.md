@@ -1,9 +1,9 @@
-# Damance Calc
+# K Calc
 ### Competitive Pokémon Analysis Engine
 
 A web-based tool for analyzing matchups in competitive Pokémon doubles. Given your team and a list of opponent threats, it calculates offense, defense, and speed matchups across multiple scenarios simultaneously — solving the "hidden information" problem of not knowing your opponent's exact EV spreads.
 
-Built on [@smogon/calc](https://github.com/smogon/damage-calc).
+Built on [@smogon/calc](https://github.com/smogon/damage-calc) using the **Champions format** (32 EV cap).
 
 ---
 
@@ -11,16 +11,43 @@ Built on [@smogon/calc](https://github.com/smogon/damage-calc).
 
 https://khalilsg.github.io/damagecalc/
 
+**Demo mode** (pre-loaded team, no setup required): https://khalilsg.github.io/damagecalc/demo/
+
 ---
 
 ## Features
 
-- Executive summary of key threats and opportunities
-- Offensive damage calcs for every move on your team vs. opponent archetypes
-- Defensive damage calcs using opponent's common moves from Smogon's dataset
-- Speed ladder showing your team vs. opponent min/max speeds and boost scenarios
-- Extended Smogon format with stat boost tags
-- Searchable opponent dropdown with Enter-to-autofill and configurable exclusions
+### Analysis Tabs
+
+| Tab | Description |
+|-----|-------------|
+| **My Offense** | Offensive calcs for every move vs. opponent defensive archetypes. Switches to live-stage results when any Battle Tracker stage is active. |
+| **My Offense: Expanded** | Full ±6 stage grid per move. Reads live tracker stages and instantly highlights the matching cell. |
+| **My Defense** | Incoming damage from opponent's common moves (sourced from Smogon usage stats). Logged moves appear first with a LIVE badge. |
+| **My Defense: Expanded** | Full ±6 stage grid for incoming moves. Live-tracked moves also show their full stage grid. |
+| **Matchup Lookup** | Select any pair (your Pokémon vs. one opponent) to instantly see offense + defense calcs at current live stages. |
+| **Speed Ladder** | Visualizes your team vs. opponent speeds across min/max/scarf/tailwind scenarios. Reflects live Spe stage changes. |
+| **Summary** | Key threats and opportunities grouped by Pokémon pair, with calc details indented beneath each pair. |
+
+### Battle Tracker (Persistent Sidebar)
+
+Real-time state tracking that updates all tabs without re-running the full analysis.
+
+- **Stat stages:** ±1 adjustors for Atk, SpA, Def, SpD, Spe on every card (±6 range). Global reset per Pokémon.
+- **Helping Hand:** Per-Pokémon toggle (highlights gold). Applies a 1.5× damage boost to that Pokémon's outgoing calcs.
+- **KO / Remove (✕):** Removes a Pokémon from the tracker and strips it from all analysis tabs instantly.
+- **Weather:** Mutually exclusive toggles for Sun, Rain, Sand, Snow. Triggers immediate re-analysis.
+- **Screens:** Reflect and Light Screen for both your side and opponent's side.
+- **Friend Guard:** Separate toggles for your side and the opponent's side. Halves all incoming damage to that side.
+- **Opponent move log:** Type a move name to log it. Immediately calculates damage against your full team and displays it with a LIVE badge in the Defense tabs.
+
+### Other
+
+- Executive summary highlighting guaranteed OHKOs, chance OHKOs (>5%), and notable 2HKOs (>25%) grouped by matchup pair
+- Smogon usage stats integration — opponent common moves fetched live, with bundled fallback
+- Extended Smogon format with stat boost tags and pre-loaded team presets
+- Searchable opponent dropdown with arrow-key navigation and Enter-to-autofill
+- Item and Pokémon name normalization (fuzzy match within edit distance 4, alias table for regional forms)
 
 ---
 
@@ -28,132 +55,122 @@ https://khalilsg.github.io/damagecalc/
 
 ### Web UI
 
-    npm install
-    npm run dev
+```
+npm install
+npm run dev
+```
 
-Then open http://localhost:5173 in your browser.
+Then open http://localhost:5173.
 
 To deploy to GitHub Pages:
 
-    npm run build
-    git add .
-    git commit -m "your message"
-    git push origin main
-
-### Terminal Tool (v1)
-
-    node battlecalc.js <path-to-sets.txt> <defender1> <defender2> ...
-
-Example:
-
-    node battlecalc.js myteam.txt Garchomp Sylveon "Iron Hands" Amoonguss
+```
+npm run build
+git add dist/
+git commit -m "build"
+git push origin main
+```
 
 ---
 
 ## Team Format
 
-Uses standard Pokémon Showdown export format with this optional additions on the first line:
+Standard Pokémon Showdown export with optional tags on the first line:
 
-1. Optional stat boost tags: [+1 Atk], [+2 SpA], [-1 Spe], etc. Will test against all of these
+- **Stat boost tags** — `[+1 SpA]`, `[+2 SpA]`, `[-1 Spe]` etc. The tool tests each as a separate scenario in My Offense.
 
 Example:
 
-    Alakazam-Mega @ Alakazite [+1 SpA] [+2 SpA]
-    Ability: Trace
-    Level: 50
-    EVs: 252 SpA / 4 SpD / 252 Spe
-    Timid Nature
-    - Dazzling Gleam
-    - Focus Blast
-    - Psychic
-    - Protect
+```
+Blastoise-Mega @ Blastoisinite [+2 SpA] [+2 Spe]
+Ability: Mega Launcher
+EVs: 32 SpA / 2 SpD / 32 Spe
+Modest Nature
+- Protect
+- Dark Pulse
+- Water Spout
+- Shell Smash
 
-    Basculegion (M) @ Choice Specs
-    Ability: Swift Swim
-    Tera Type: Ghost
-    EVs: 252 Atk / 4 SpD / 252 Spe
-    Jolly Nature
-    - Wave Crash
-    - Flip Turn
-    - Psychic Fangs
-    - Last Respects
+Alakazam-Mega @ Alakazite [+2 SpA]
+Ability: Trace
+EVs: 32 SpA / 2 SpD / 32 Spe
+Timid Nature
+- Dazzling Gleam
+- Focus Blast
+- Psychic
+- Protect
+```
 
 Pokémon with no item can still have tags:
 
-    Liepard
-    Ability: Limber
-    ...
+```
+Liepard
+Ability: Limber
+EVs: 32 HP / 2 Def / 32 SpD
+Calm Nature
+- Protect
+- Encore
+- Foul Play
+- Protect
+```
+
+Pre-loaded team presets live in the `teams/` folder as plain `.txt` files.
 
 ---
 
 ## Analysis Logic
 
+Uses the **Champions format**: EVs are out of 32 (not 252).
+
 ### Offensive Archetypes (opponent's possible defensive spreads)
 
-| Label        | EVs                  | Nature  |
-|--------------|----------------------|---------|
-| Max SpDef    | 252 HP / 252 SpD     | Calm    |
-| Max Def      | 252 HP / 252 Def     | Bold    |
-| Min Defense  | 0 HP / 0 Def / 0 SpD | Serious |
+| Label | Nature | EVs |
+|-------|--------|-----|
+| Max SpDef | Calm | 32 HP / 32 SpD |
+| Max Def | Bold | 32 HP / 32 Def |
+| Min Defense | Serious | 0 HP / 0 Def / 0 SpD |
 
-Special moves are tested against Max SpDef and Min Defense.
-Physical moves are tested against Max Def and Min Defense.
+Special moves are tested against Max SpDef + Min Defense.
+Physical moves are tested against Max Def + Min Defense.
 
 ### Defensive Archetypes (opponent's possible offensive spreads)
 
-| Label        | EVs      | Nature  |
-|--------------|----------|---------|
-| Max SpAtk    | 252 SpA  | Modest  |
-| Max Atk      | 252 Atk  | Adamant |
-| Min Offense  | 0 Atk    | Serious |
+| Label | Nature | EVs |
+|-------|--------|-----|
+| Max SpAtk | Modest | 32 SpA |
+| Max Atk | Adamant | 32 Atk |
+| Min Offense | Serious | 0 Atk / 0 SpA |
 
 ### Speed Scenarios
 
-Your Pokémon: base speed only, plus any custom boost tags (e.g. [+2 Spe]).
-Opponent: min speed (0 Spe / Serious), max speed (252 Spe / Jolly), plus scarf and tailwind variants of each.
+| Label | Nature | EVs |
+|-------|--------|-----|
+| Max Speed | Jolly | 32 Spe |
+| Max Speed (Neutral) | Serious | 32 Spe |
+| Min Speed | Serious | 0 Spe |
+
+Additional scenarios tested: +1/+2 speed stages, -1/-2 speed stages, Choice Scarf, Tailwind.
 
 ---
 
 ## Name Aliases
 
-| Input      | Resolves To          |
-|------------|----------------------|
-| Pokémon-H  | Pokémon-Hisui        |
-| Pokémon-G  | Pokémon-Galar        |
-| Tauros-P   | Tauros-Paldea-Combat |
-| Tauros-B   | Tauros-Paldea-Blaze  |
-| Tauros-A   | Tauros-Paldea-Aqua   |
-| Aegislash  | Aegislash-Both       |
+| Input | Resolves To |
+|-------|-------------|
+| Pokémon-H | Pokémon-Hisui |
+| Pokémon-G | Pokémon-Galar |
+| Tauros-P | Tauros-Paldea-Combat |
+| Tauros-B | Tauros-Paldea-Blaze |
+| Tauros-A | Tauros-Paldea-Aqua |
+| Aegislash | Aegislash-Both |
 
 Typos within edit distance 4 are automatically corrected.
+Item names are validated against the calc's item database; unrecognized names are dropped rather than crashing the calc.
 
 ---
 
-## Dropdown Exclusions
+## Moves Skipped in Offense Calcs
 
-Add Pokémon names to src/exclusions.txt (one per line) to hide them from the opponent search dropdown.
+Protect, Wide Guard, Quick Guard, Parting Shot, Taunt, Encore, Tailwind, After You, Follow Me, Helping Hand
 
----
-
-## Terminal Tool (v1) Reference
-
-### Defender Variants
-
-| Label         | EVs                  | Nature  |
-|---------------|----------------------|---------|
-| Defensive SpD | 252 HP / 252 SpD     | Calm    |
-| Defensive Def | 252 HP / 252 Def     | Bold    |
-| Neutral       | 0 HP / 0 Def / 0 SpD | Serious |
-
-### Moves Skipped by Default
-
-Protect, Wide Guard, Quick Guard, Parting Shot, Taunt, Encore, Tailwind
-
-Edit MOVES_TO_SKIP in battlecalc.js to change this list.
-
-### Output Colors
-
-- Red: guaranteed OHKO
-- Orange: chance OHKO
-- Yellow: guaranteed or >50% chance 2HKO
-ENDOFFILE
+Edit `MOVES_TO_SKIP` in `src/calcEngine.js` to change this list.
