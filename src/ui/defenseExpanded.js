@@ -1,48 +1,40 @@
-import { buildFilterControls } from './offenseExpanded.js';
+function clampStage(n) { return Math.max(-2, Math.min(2, n ?? 0)); }
 
-export function renderDefenseExpanded(defenseExpandedData, container) {
+export function renderDefenseExpanded(defenseExpandedData, container, state) {
   container.innerHTML = '';
-
-  const controls = buildFilterControls('Opp offense stage:', 'My defense stage:', (oppStage, myStage) => {
-    renderMatchups(defenseExpandedData, content, oppStage, myStage);
-  });
-  container.appendChild(controls.wrapper);
-
-  const content = document.createElement('div');
-  container.appendChild(content);
-
-  renderMatchups(defenseExpandedData, content, 0, 0);
-}
-
-function renderMatchups(data, container, oppStage, myStage) {
-  container.innerHTML = '';
-  for (const { playerName, matchups } of data) {
+  for (const { playerName, matchups } of defenseExpandedData) {
     const section = el('div', 'player-section');
-    section.appendChild(sectionHeader(`▸ ${playerName} (opp stage: ${fmt(oppStage)}, my stage: ${fmt(myStage)})`));
+    section.appendChild(sectionHeader(`▸ ${playerName} (incoming)`));
     const cards = el('div', 'matchup-cards');
     for (const { opponentName, moveCalcs } of matchups) {
       if (moveCalcs.length === 0) continue;
       const card = el('div', 'matchup-card');
       card.appendChild(cardHeader(`${opponentName} attacking`));
-      for (const { moveName, isInBattle, grid } of moveCalcs) {
-        const key = `${oppStage},${myStage}`;
-        const r = grid[key];
+      let hasRows = false;
+      for (const { moveName, category, grid } of moveCalcs) {
+        const oppStage = clampStage(category === 'special'
+          ? state?.opponentStages?.[opponentName]?.spa
+          : state?.opponentStages?.[opponentName]?.atk);
+        const myStage = clampStage(category === 'special'
+          ? state?.myStages?.[playerName]?.spd
+          : state?.myStages?.[playerName]?.def);
+        const r = grid[`${oppStage},${myStage}`];
         if (!r) continue;
-        const moveLabel = el('div', `scenario-label${isInBattle ? ' in-battle-label' : ''}`);
-        moveLabel.textContent = isInBattle ? `★ ${moveName} (in battle)` : moveName;
+        hasRows = true;
+        const moveLabel = el('div', 'scenario-label');
+        moveLabel.textContent = moveName;
         card.appendChild(moveLabel);
-        const row = el('div', `calc-row ${koClass(r.classification)}${isInBattle ? ' in-battle-row' : ''}`);
+        const row = el('div', `calc-row ${koClass(r.classification)}`);
         row.textContent = r.formattedDesc;
         card.appendChild(row);
       }
-      cards.appendChild(card);
+      if (hasRows) cards.appendChild(card);
     }
     section.appendChild(cards);
     container.appendChild(section);
   }
 }
 
-function fmt(n) { return n > 0 ? `+${n}` : `${n}`; }
 function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
 function sectionHeader(text) { const h = el('div', 'section-header'); h.textContent = text; return h; }
 function cardHeader(text)    { const h = el('div', 'card-header');    h.textContent = text; return h; }

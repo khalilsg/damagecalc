@@ -1,4 +1,4 @@
-export function renderDefense(defenseData, container) {
+export function renderDefense(defenseData, container, state) {
   container.innerHTML = '';
   for (const { playerName, matchups } of defenseData) {
     const section = el('div', 'player-section');
@@ -8,21 +8,35 @@ export function renderDefense(defenseData, container) {
       if (scenarios.length === 0) continue;
       const card = el('div', 'matchup-card');
       card.appendChild(cardHeader(`${opponentName} attacking`));
-      for (const { label, rows } of scenarios) {
-        if (label !== 'Base') card.appendChild(scenarioLabel(`My ${label}`));
-        for (const { formattedDesc, classification, isInBattle } of rows) {
-          const row = el('div', `calc-row ${koClass(classification)}${isInBattle ? ' in-battle-row' : ''}`);
-          if (isInBattle) {
-            const badge = el('span', 'in-battle-badge');
-            badge.textContent = 'IN BATTLE';
-            row.appendChild(badge);
-            row.appendChild(document.createTextNode(' ' + formattedDesc));
-          } else {
-            row.textContent = formattedDesc;
-          }
+
+      // Tracked (live) moves from sidebar — shown first, highlighted
+      const trackedMoves = state?.opponentMoves?.[opponentName] ?? [];
+      for (const { name: moveName, calcs } of trackedMoves) {
+        const playerCalc = (calcs ?? []).find(c => c.playerName === playerName);
+        if (!playerCalc || playerCalc.rows.length === 0) continue;
+        const moveLabel = el('div', 'scenario-label in-battle-label');
+        moveLabel.textContent = `★ ${moveName}`;
+        card.appendChild(moveLabel);
+        for (const { formattedDesc, classification } of playerCalc.rows) {
+          const row = el('div', `calc-row ${koClass(classification)} in-battle-row`);
+          const badge = el('span', 'in-battle-badge');
+          badge.textContent = 'LIVE';
+          row.appendChild(badge);
+          row.appendChild(document.createTextNode(' ' + formattedDesc));
           card.appendChild(row);
         }
       }
+
+      // Precomputed common-move scenarios
+      for (const { label, rows } of scenarios) {
+        if (label !== 'Base') card.appendChild(scenarioLabel(`My ${label}`));
+        for (const { formattedDesc, classification } of rows) {
+          const row = el('div', `calc-row ${koClass(classification)}`);
+          row.textContent = formattedDesc;
+          card.appendChild(row);
+        }
+      }
+
       cards.appendChild(card);
     }
     section.appendChild(cards);

@@ -184,15 +184,12 @@ function calcResult(attacker, defender, moveName) {
 
 // --- Main analysis engine ---
 
-export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') {
+export async function runAnalysis(playerSets, opponentNames) {
   const offense = [];
   const offenseExpanded = [];
   const defense = [];
   const defenseExpanded = [];
   const speed = [];
-
-  const inBattleMoveName = inBattleMove.trim();
-  const inBattleCategory = inBattleMoveName ? getMoveCategory(inBattleMoveName) : null;
 
   for (const set of playerSets) {
     const playerName = resolveSpeciesName(set.name);
@@ -267,14 +264,7 @@ export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') 
       const defMatchup = { opponentName: resolvedOpp, scenarios: [] };
       const commonMoves = await getCommonOffensiveMoves(resolvedOpp);
 
-      // In-battle move goes first, highlighted
-      const movesToCalc = [];
-      if (inBattleMoveName) {
-        movesToCalc.push({ name: inBattleMoveName, isInBattle: true });
-      }
-      for (const m of commonMoves) movesToCalc.push({ name: m, isInBattle: false });
-
-      for (const { name: moveName, isInBattle } of movesToCalc) {
+      for (const moveName of commonMoves) {
         const cat = getMoveCategory(moveName);
         const archetypes = cat === 'special'
           ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
@@ -290,7 +280,7 @@ export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') 
             if (r) {
               defMatchup.scenarios.push({
                 label: boostSc.label,
-                rows: [{ ...r, archetype: arch.label, isInBattle }],
+                rows: [{ ...r, archetype: arch.label }],
               });
             }
           }
@@ -300,11 +290,8 @@ export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') 
 
       // ===================== DEFENSE EXPANDED =====================
       const defExpMatchup = { opponentName: resolvedOpp, moveCalcs: [] };
-      const allDefMoves = inBattleMoveName
-        ? [{ name: inBattleMoveName, isInBattle: true }, ...commonMoves.map(m => ({ name: m, isInBattle: false }))]
-        : commonMoves.map(m => ({ name: m, isInBattle: false }));
 
-      for (const { name: moveName, isInBattle } of allDefMoves) {
+      for (const moveName of commonMoves) {
         const cat = getMoveCategory(moveName);
         if (cat === 'status') continue;
         const atkStat = cat === 'special' ? 'spa' : 'atk';
@@ -317,7 +304,7 @@ export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') 
             grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName);
           }
         }
-        defExpMatchup.moveCalcs.push({ moveName, category: cat, isInBattle, grid });
+        defExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
       }
       playerDefenseExp.push(defExpMatchup);
 
@@ -348,4 +335,32 @@ export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') 
   }
 
   return { offense, offenseExpanded, defense, defenseExpanded, speed };
+}
+
+// Compute how a single opponent move hits each player pokemon.
+// Returns [{ playerName, rows: [{ ...calcResult, archetype }] }]
+export async function computeIncomingMove(moveName, opponentName, playerSets) {
+  const resolvedOpp = resolveSpeciesName(opponentName);
+  const cat = getMoveCategory(moveName);
+  if (cat === 'status') return [];
+
+  const archetypes = cat === 'special'
+    ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
+    : cat === 'physical'
+    ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max SpAtk')
+    : OFFENSE_ARCHETYPES;
+
+  const results = [];
+  for (const set of playerSets) {
+    const playerName = resolveSpeciesName(set.name);
+    const rows = [];
+    for (const arch of archetypes) {
+      const attacker = makeArchetypeOpponent(resolvedOpp, arch);
+      const defender = makeAttacker(set, playerName);
+      const r = calcResult(attacker, defender, moveName);
+      if (r) rows.push({ ...r, archetype: arch.label });
+    }
+    if (rows.length > 0) results.push({ playerName, rows });
+  }
+  return results;
 }

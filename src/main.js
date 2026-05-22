@@ -2,15 +2,30 @@ import { parseSets } from './parser.js';
 import { runAnalysis, resolveSpeciesName, allSpecies } from './calcEngine.js';
 import { preloadStats } from './smogonStats.js';
 import { TEAMS } from './teams.js';
+import { initTracker, subscribe, getState } from './battleTracker.js';
 import { renderOffense } from './ui/offense.js';
 import { renderDefense } from './ui/defense.js';
 import { renderOffenseExpanded } from './ui/offenseExpanded.js';
 import { renderDefenseExpanded } from './ui/defenseExpanded.js';
 import { renderSpeedLadder } from './ui/speedLadder.js';
 import { renderSummary } from './ui/summary.js';
+import { renderSidebarTracker } from './ui/sidebarTracker.js';
 
-// Start fetching Smogon stats in the background immediately.
 preloadStats();
+
+// Module-level state — kept so the tracker subscriber can re-render
+let analysisData   = null;
+let currentPlayerSets = null;
+let unsubscribe    = null;
+
+function renderReactive(state) {
+  if (!analysisData) return;
+  renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
+  renderOffenseExpanded(analysisData.offenseExpanded, document.getElementById('tab-offense-exp'), state);
+  renderDefenseExpanded(analysisData.defenseExpanded, document.getElementById('tab-defense-exp'), state);
+  renderDefense(analysisData.defense, document.getElementById('tab-defense'), state);
+  renderSpeedLadder(analysisData.speed, document.getElementById('tab-speed'), state);
+}
 
 // --- Teams dropdown ---
 const teamSelect = document.getElementById('team-select');
@@ -141,9 +156,7 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
   const errorEl = document.getElementById('error');
   errorEl.textContent = '';
 
-  const teamText     = document.getElementById('team-input').value.trim();
-  const inBattleMove = document.getElementById('in-battle-move').value.trim();
-
+  const teamText = document.getElementById('team-input').value.trim();
   if (!teamText) { errorEl.textContent = 'Please paste or select a team.'; return; }
   if (selectedDefenders.length === 0) { errorEl.textContent = 'Please add at least one opponent.'; return; }
 
@@ -159,9 +172,8 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
   btn.textContent = 'ANALYZING…';
   btn.disabled = true;
 
-  let analysisData;
   try {
-    analysisData = await runAnalysis(playerSets, selectedDefenders, inBattleMove);
+    analysisData = await runAnalysis(playerSets, selectedDefenders);
   } catch (e) {
     errorEl.textContent = `Calc error: ${e.message}`;
     btn.textContent = 'ANALYZE MATCHUP';
@@ -172,12 +184,20 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
   btn.textContent = 'ANALYZE MATCHUP';
   btn.disabled = false;
 
+  currentPlayerSets = playerSets;
+
+  // Re-subscribe (new analysis = fresh tracker state)
+  if (unsubscribe) unsubscribe();
+  unsubscribe = subscribe(renderReactive);
+
+  // Init tracker — triggers notify → renderReactive via subscriber
+  const playerNames   = analysisData.offense.map(o => o.playerName);
+  const opponentNames = [...new Set(analysisData.offense.flatMap(o => o.matchups.map(m => m.opponentName)))];
+  initTracker(playerNames, opponentNames);
+
+  // Static tabs (don't react to tracker state)
   renderSummary(analysisData, document.getElementById('tab-summary'));
   renderOffense(analysisData.offense, document.getElementById('tab-offense'));
-  renderOffenseExpanded(analysisData.offenseExpanded, document.getElementById('tab-offense-exp'));
-  renderDefense(analysisData.defense, document.getElementById('tab-defense'));
-  renderDefenseExpanded(analysisData.defenseExpanded, document.getElementById('tab-defense-exp'));
-  renderSpeedLadder(analysisData.speed, document.getElementById('tab-speed'));
 
   switchTab('tab-summary');
 });

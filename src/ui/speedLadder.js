@@ -1,38 +1,46 @@
-export function renderSpeedLadder(speedData, container) {
+import { applySpeedStage } from '../speedCalc.js';
+
+export function renderSpeedLadder(speedData, container, state) {
   container.innerHTML = '';
 
   const basicEntries = [], fullEntries = [];
   const basicSeen = new Set(), fullSeen = new Set();
 
   for (const { playerName, opponentName, basicComparisons, fullComparisons } of speedData) {
+    const playerSpeStage = state?.myStages?.[playerName]?.spe ?? 0;
+    const oppSpeStage    = state?.opponentStages?.[opponentName]?.spe ?? 0;
+
     // Basic column
     for (const c of basicComparisons) {
-      const pk = `player-${playerName}-${c.playerLabel}-${c.playerSpeed}`;
+      const ps = applySpeedStage(c.playerSpeed, playerSpeStage);
+      const pk = `player-${playerName}-${c.playerLabel}-${ps}`;
       if (!basicSeen.has(pk)) {
         basicSeen.add(pk);
-        basicEntries.push({ displayName: playerName, speed: c.playerSpeed, isPlayer: true });
+        basicEntries.push({ displayName: playerName, speed: ps, isPlayer: true });
       }
-      const ok = `opp-${opponentName}-${c.opponentLabel}-${c.opponentSpeed}`;
+      const os = applySpeedStage(c.opponentSpeed, oppSpeStage);
+      const ok = `opp-${opponentName}-${c.opponentLabel}-${os}`;
       if (!basicSeen.has(ok)) {
         basicSeen.add(ok);
-        const suffix = c.opponentLabel; // '', '+', '++'
-        basicEntries.push({ displayName: `${opponentName}${suffix}`, speed: c.opponentSpeed, isPlayer: false });
+        basicEntries.push({ displayName: `${opponentName}${c.opponentLabel}`, speed: os, isPlayer: false });
       }
     }
 
     // Full column
     for (const c of fullComparisons) {
-      const pk = `player-${playerName}-${c.playerLabel}-${c.playerSpeed}`;
+      const ps = applySpeedStage(c.playerSpeed, playerSpeStage);
+      const pk = `player-${playerName}-${c.playerLabel}-${ps}`;
       if (!fullSeen.has(pk)) {
         fullSeen.add(pk);
         const suffix = c.playerLabel === 'Base' ? '' : ` (${c.playerLabel})`;
-        fullEntries.push({ displayName: `${playerName}${suffix}`, speed: c.playerSpeed, isPlayer: true });
+        fullEntries.push({ displayName: `${playerName}${suffix}`, speed: ps, isPlayer: true });
       }
-      const ok = `opp-${opponentName}-${c.opponentLabel}-${c.opponentSpeed}`;
+      const os = applySpeedStage(c.opponentSpeed, oppSpeStage);
+      const ok = `opp-${opponentName}-${c.opponentLabel}-${os}`;
       if (!fullSeen.has(ok)) {
         fullSeen.add(ok);
         const suffix = c.opponentLabel ? ` ${c.opponentLabel}` : '';
-        fullEntries.push({ displayName: `${opponentName}${suffix}`, speed: c.opponentSpeed, isPlayer: false });
+        fullEntries.push({ displayName: `${opponentName}${suffix}`, speed: os, isPlayer: false });
       }
     }
   }
