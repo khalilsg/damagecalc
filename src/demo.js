@@ -35,6 +35,26 @@ function fieldKey(state) {
   ].join('|');
 }
 
+// Filter analysis data to only the Pokémon still active in the tracker (not KO'd).
+function filterByActive(data, state) {
+  if (!data) return data;
+  const myActive  = new Set(Object.keys(state.myStages));
+  const oppActive = new Set(Object.keys(state.opponentStages));
+  const filterSections = arr => arr
+    .filter(s => myActive.has(s.playerName))
+    .map(s => ({ ...s, matchups: s.matchups.filter(m => oppActive.has(m.opponentName)) }));
+  return {
+    ...data,
+    offense:         filterSections(data.offense),
+    offenseExpanded: filterSections(data.offenseExpanded),
+    defense:         filterSections(data.defense),
+    defenseExpanded: filterSections(data.defenseExpanded),
+    speed:           data.speed.filter(s =>
+      myActive.has(s.playerName) && oppActive.has(s.opponentName)
+    ),
+  };
+}
+
 async function renderReactive(state) {
   if (!analysisData) return;
 
@@ -51,8 +71,6 @@ async function renderReactive(state) {
         opponentFriendGuard: state.opponentFriendGuard,
         myHelpingHand:       state.myHelpingHand,
       });
-      renderSummary(analysisData, document.getElementById('tab-summary'));
-      renderOffense(analysisData.offense, document.getElementById('tab-offense'));
     } catch (e) {
       console.warn('Re-analysis failed:', e);
     } finally {
@@ -60,12 +78,16 @@ async function renderReactive(state) {
     }
   }
 
+  // Filter to active (non-KO'd) Pokémon before rendering all tabs
+  const filtered = filterByActive(analysisData, state);
+  renderSummary(filtered, document.getElementById('tab-summary'));
+  renderOffense(filtered.offense, document.getElementById('tab-offense'));
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
-  renderMatchupLookup(analysisData, document.getElementById('tab-matchup'), state);
-  renderOffenseExpanded(analysisData.offenseExpanded, document.getElementById('tab-offense-exp'), state);
-  renderDefenseExpanded(analysisData.defenseExpanded, document.getElementById('tab-defense-exp'), state);
-  renderDefense(analysisData.defense, document.getElementById('tab-defense'), state);
-  renderSpeedLadder(analysisData.speed, document.getElementById('tab-speed'), state);
+  renderMatchupLookup(filtered, document.getElementById('tab-matchup'), state);
+  renderOffenseExpanded(filtered.offenseExpanded, document.getElementById('tab-offense-exp'), state);
+  renderDefenseExpanded(filtered.defenseExpanded, document.getElementById('tab-defense-exp'), state);
+  renderDefense(filtered.defense, document.getElementById('tab-defense'), state);
+  renderSpeedLadder(filtered.speed, document.getElementById('tab-speed'), state);
 }
 
 // Tab switching
@@ -120,8 +142,5 @@ tabs.forEach(tab => {
   subscribe(renderReactive);
 
   const playerNames = analysisData.offense.map(o => o.playerName);
-  initTracker(playerNames, currentOpponents);  // triggers notify → renderReactive
-
-  renderSummary(analysisData, document.getElementById('tab-summary'));
-  renderOffense(analysisData.offense, document.getElementById('tab-offense'));
+  initTracker(playerNames, currentOpponents);  // triggers notify → renderReactive (renders all tabs)
 })();
