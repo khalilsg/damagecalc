@@ -1,8 +1,8 @@
-Blastoise-Mega @ Blastoisite [+2 SpA] [+2 Spe] [-2 SpD] [-2 Def]
+Blastoise-Mega @ Blastoisinite [+2 SpA] [+2 Spe] [-2 SpD] [-2 Def]
 Ability: Rain Dish
 EVs: 32 SpA / 2 SpD / 32 Spe
 Modest Nature
-- Aura Pulse
+- Aura Sphere
 - Dark Pulse
 - Water Spout
 - Shell Smash

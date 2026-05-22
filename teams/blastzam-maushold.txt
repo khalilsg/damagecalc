@@ -8,7 +8,7 @@ Timid Nature
 - Psychic
 - Protect
 
-Blastoise-Mega @ Blastoisite [+2 SpA] [+2 Spe]
+Blastoise-Mega @ Blastoisinite [+2 SpA] [+2 Spe]
 Ability: Rain Dish
 EVs: 252 SpA / 4 SpD / 252 Spe
 Modest Nature
