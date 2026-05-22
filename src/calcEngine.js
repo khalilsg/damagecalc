@@ -130,6 +130,12 @@ function getFallbackMoves(speciesName) {
 
 // --- Pokemon constructors ---
 
+function resolveItem(name) {
+  if (!name) return undefined;
+  const id = name.toLowerCase().replace(/[-\s]/g, '');
+  return gen.items.get(id)?.name ?? undefined;
+}
+
 function makeAttacker(set, resolvedName, boostOverrides = {}) {
   const p = new Pokemon(gen, resolvedName, {
     level:  set.level,
@@ -137,7 +143,7 @@ function makeAttacker(set, resolvedName, boostOverrides = {}) {
     ivs:    set.ivs,
     nature: set.nature,
     ability: set.ability,
-    item:   set.item,
+    item:   resolveItem(set.item),
     ...(set.gender && { gender: set.gender }),
   });
   if (Object.keys(boostOverrides).length > 0) {
