@@ -83,12 +83,12 @@ async function renderReactive(state) {
   // Filter to active (non-KO'd) Pokémon before rendering all tabs
   const filtered = filterByActive(analysisData, state);
   renderSummary(filtered, document.getElementById('tab-summary'));
-  renderOffense(filtered.offense, document.getElementById('tab-offense'));
+  renderOffense(filtered.offense, filtered.offenseExpanded, document.getElementById('tab-offense'), state);
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
   renderMatchupLookup(filtered, document.getElementById('tab-matchup'), state);
   renderOffenseExpanded(filtered.offenseExpanded, document.getElementById('tab-offense-exp'), state);
   renderDefenseExpanded(filtered.defenseExpanded, document.getElementById('tab-defense-exp'), state);
-  renderDefense(filtered.defense, document.getElementById('tab-defense'), state);
+  renderDefense(filtered.defense, filtered.defenseExpanded, document.getElementById('tab-defense'), state);
   renderSpeedLadder(filtered.speed, document.getElementById('tab-speed'), state);
 }
 

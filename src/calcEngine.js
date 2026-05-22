@@ -196,6 +196,39 @@ function calcResult(attacker, defender, moveName, field) {
   }
 }
 
+// Strip the EV/nature/item prefix before my Pokémon's name in the attacker position.
+// Turns "32+ SpA Blastoise Surf vs. ..." into "Blastoise Surf vs. ..."
+function stripAttackerName(r, playerName) {
+  if (!r || !playerName) return r;
+  const strip = s => {
+    if (!s) return s;
+    const vsIdx = s.indexOf(' vs. ');
+    if (vsIdx === -1) return s;
+    const attackerPart = s.slice(0, vsIdx);
+    const nameIdx = attackerPart.indexOf(playerName);
+    if (nameIdx === -1) return s;
+    return s.slice(nameIdx);
+  };
+  return { ...r, formattedDesc: strip(r.formattedDesc), formattedBase: strip(r.formattedBase) };
+}
+
+// Strip the EV/nature/item prefix before my Pokémon's name in the defender position.
+// Turns "... vs. 32+ SpD Blastoise: ..." into "... vs. Blastoise: ..."
+function stripDefenderName(r, playerName) {
+  if (!r || !playerName) return r;
+  const vsStr = ' vs. ';
+  const strip = s => {
+    if (!s) return s;
+    const vsIdx = s.indexOf(vsStr);
+    if (vsIdx === -1) return s;
+    const afterVs = s.slice(vsIdx + vsStr.length);
+    const nameIdx = afterVs.indexOf(playerName);
+    if (nameIdx === -1) return s;
+    return s.slice(0, vsIdx + vsStr.length) + s.slice(vsIdx + vsStr.length + nameIdx);
+  };
+  return { ...r, formattedDesc: strip(r.formattedDesc), formattedBase: strip(r.formattedBase) };
+}
+
 // --- Main analysis engine ---
 
 export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) {
@@ -270,7 +303,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
             : DEFENSE_ARCHETYPES;
           for (const arch of archetypes) {
             const defender = makeArchetypeOpponent(resolvedOpp, arch);
-            const r = calcResult(attacker, defender, moveName, offenseField);
+            const r = stripAttackerName(calcResult(attacker, defender, moveName, offenseField), playerName);
             if (r) rows.push({ ...r, archetype: arch.label });
           }
         }
@@ -290,7 +323,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
           for (const oppStage of STAGES) {
             const attacker = makeAttacker(set, playerName, { [atkStat]: myStage });
             const defender = makeArchetypeOpponent(resolvedOpp, MIN_DEFENSE, { [defStat]: oppStage });
-            grid[`${myStage},${oppStage}`] = calcResult(attacker, defender, moveName, offenseField);
+            grid[`${myStage},${oppStage}`] = stripAttackerName(calcResult(attacker, defender, moveName, offenseField), playerName);
           }
         }
         offExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
@@ -313,7 +346,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
           const attacker = makeArchetypeOpponent(resolvedOpp, arch);
           for (const boostSc of boostScenarios) {
             const defender = makeAttacker(set, playerName, boostSc.boosts);
-            const r = calcResult(attacker, defender, moveName, defenseField);
+            const r = stripDefenderName(calcResult(attacker, defender, moveName, defenseField), playerName);
             if (r) {
               defMatchup.scenarios.push({
                 label: boostSc.label,
@@ -338,7 +371,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
           for (const myStage of STAGES) {
             const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
             const defender = makeAttacker(set, playerName, { [defStat]: myStage });
-            grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName, defenseField);
+            grid[`${oppStage},${myStage}`] = stripDefenderName(calcResult(attacker, defender, moveName, defenseField), playerName);
           }
         }
         defExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
@@ -399,7 +432,7 @@ export async function computeIncomingMove(moveName, opponentName, playerSets, fi
     for (const arch of archetypes) {
       const attacker = makeArchetypeOpponent(resolvedOpp, arch);
       const defender = makeAttacker(set, playerName);
-      const r = calcResult(attacker, defender, moveName, field);
+      const r = stripDefenderName(calcResult(attacker, defender, moveName, field), playerName);
       if (r) rows.push({ ...r, archetype: arch.label });
     }
     if (rows.length > 0) results.push({ playerName, rows });
@@ -427,7 +460,7 @@ export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOp
     for (const myStage of STAGES) {
       const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
       const defender = makeAttacker(playerSet, playerName, { [defStat]: myStage });
-      grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName, field);
+      grid[`${oppStage},${myStage}`] = stripDefenderName(calcResult(attacker, defender, moveName, field), playerName);
     }
   }
   return { playerName, moveName, category: cat, grid };
