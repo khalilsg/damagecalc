@@ -1,0 +1,53 @@
+Blastoise-Mega @ Blastoisite [+2 SpA] [+2 Spe] [-2 SpD] [-2 Def]
+Ability: Rain Dish
+EVs: 32 SpA / 2 SpD / 32 Spe
+Modest Nature
+- Aura Pulse
+- Dark Pulse
+- Water Spout
+- Shell Smash
+
+Alakazam-Mega @ Alakazite [+2 SpA]
+Ability: Trace
+EVs: 32 SpA / 2 SpD / 32 Spe
+Timid Nature
+- Dazzling Gleam
+- Focus Blast
+- Psychic
+- Protect
+
+Sableye @ Sitrus Berry
+Ability: Prankster
+EVs: 32 HP / 32 SpD / 2 Def
+Calm Nature
+- Rain Dance
+- Foul Play
+- Reflect
+- Encore
+
+Volcarona @ Sitrus Berry [+1 Spe] [+1 SpA] [+1 SpD]
+Ability: Flame Body
+EVs: 32 HP / 30 Def / 4 SpA
+Calm Nature
+- Struggle Bug
+- Rage Powder
+- Quiver Dance
+- Heat Wave
+
+Whimsicott @ Fairy Feather
+Ability: Prankster
+EVs: 252 HP / 252 SpA
+Modest Nature
+- Moonblast
+- Taunt
+- Light Screen
+- Tailwind
+
+Maushold @ Choice Scarf
+Ability: Friend Guard
+EVs: 32 HP / 32 SpD / 2 Spe
+Calm Nature
+- Follow Me
+- Super Fang
+- Follow Me
+- Helping Hand
