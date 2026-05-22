@@ -9,7 +9,7 @@ Timid Nature
 - Protect
 
 Blastoise-Mega @ Blastoisinite [+2 SpA] [+2 Spe]
-Ability: Rain Dish
+Ability: Mega Launcher
 EVs: 252 SpA / 4 SpD / 252 Spe
 Modest Nature
 - Protect

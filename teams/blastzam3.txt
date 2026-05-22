@@ -1,5 +1,5 @@
 Blastoise-Mega @ Blastoisinite [+2 SpA] [+2 Spe] [-2 SpD] [-2 Def]
-Ability: Rain Dish
+Ability: Mega Launcher
 EVs: 32 SpA / 2 SpD / 32 Spe
 Modest Nature
 - Aura Sphere
