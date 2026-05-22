@@ -1,0 +1,53 @@
+Whimsicott @ Sitrus Berry
+Ability: Prankster
+Level: 50
+Serious Nature
+- Tailwind
+- Encore
+- Moonblast
+- Protect
+
+Incineroar @ Chople Berry
+Ability: Intimidate
+Level: 50
+Serious Nature
+- Throat Chop
+- Flare Blitz
+- Fake Out
+- Parting Shot
+
+Floette-Eternal
+Ability: Flower Veil
+Level: 50
+Serious Nature
+- Light of Ruin
+- Protect
+- Moonblast
+- Dazzling Gleam
+
+Tyranitar @ Focus Sash
+Ability: Sand Stream
+Level: 50
+Serious Nature
+- Rock Slide
+- Knock Off
+- Protect
+- High Horsepower
+
+Garchomp @ White Herb
+Ability: Sand Veil
+Level: 50
+Serious Nature
+- Protect
+- Earthquake
+- Outrage
+- Rock Slide
+
+Charizard-Mega-Y @ Charizardite Y
+Ability: Solar Power
+Level: 50
+Serious Nature
+- Heat Wave
+- Focus Blast
+- Protect
+- Air Slash

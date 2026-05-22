@@ -3,6 +3,7 @@ import t2 from '../teams/blastzam.txt?raw';
 import t3 from '../teams/blastzam-maushold.txt?raw';
 import t4 from '../teams/blastzam-maushold-2.txt?raw';
 import t5 from '../teams/blastzam3.txt?raw';
+import t6 from '../teams/sunsand.txt?raw';
 
 export const TEAMS = [
   { name: 'Blastoise-M + Lopunny-M + Zoroark + Hatterene', text: t1 },
@@ -10,4 +11,5 @@ export const TEAMS = [
   { name: 'Blastzam - Maushold', text: t3 },
   { name: 'Blastzam - Maushold 2', text: t4 },
   { name: 'Blastzam3', text: t5 },
+  { name: 'SunSand', text: t6 },
 ];
