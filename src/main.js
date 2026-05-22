@@ -10,6 +10,7 @@ import { renderDefenseExpanded } from './ui/defenseExpanded.js';
 import { renderSpeedLadder } from './ui/speedLadder.js';
 import { renderSummary } from './ui/summary.js';
 import { renderSidebarTracker } from './ui/sidebarTracker.js';
+import { renderMatchupLookup } from './ui/matchupLookup.js';
 
 preloadStats();
 
@@ -21,7 +22,18 @@ let lastFieldKey      = '';
 let reanalyzing       = false;
 
 function fieldKey(state) {
-  return `${state.weather}|${state.myScreens.reflect}|${state.myScreens.lightScreen}|${state.opponentScreens.reflect}|${state.opponentScreens.lightScreen}`;
+  const hhStr = Object.entries(state.myHelpingHand ?? {})
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+    .sort()
+    .join(',');
+  return [
+    state.weather,
+    state.myScreens.reflect, state.myScreens.lightScreen,
+    state.opponentScreens.reflect, state.opponentScreens.lightScreen,
+    state.myFriendGuard, state.opponentFriendGuard,
+    hhStr,
+  ].join('|');
 }
 
 async function renderReactive(state) {
@@ -34,9 +46,12 @@ async function renderReactive(state) {
     reanalyzing  = true;
     try {
       analysisData = await runAnalysis(currentPlayerSets, currentOpponents, {
-        weather:        state.weather,
-        myScreens:      state.myScreens,
-        opponentScreens: state.opponentScreens,
+        weather:             state.weather,
+        myScreens:           state.myScreens,
+        opponentScreens:     state.opponentScreens,
+        myFriendGuard:       state.myFriendGuard,
+        opponentFriendGuard: state.opponentFriendGuard,
+        myHelpingHand:       state.myHelpingHand,
       });
       renderSummary(analysisData, document.getElementById('tab-summary'));
       renderOffense(analysisData.offense, document.getElementById('tab-offense'));
@@ -48,6 +63,7 @@ async function renderReactive(state) {
   }
 
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
+  renderMatchupLookup(analysisData, document.getElementById('tab-matchup'), state);
   renderOffenseExpanded(analysisData.offenseExpanded, document.getElementById('tab-offense-exp'), state);
   renderDefenseExpanded(analysisData.defenseExpanded, document.getElementById('tab-defense-exp'), state);
   renderDefense(analysisData.defense, document.getElementById('tab-defense'), state);

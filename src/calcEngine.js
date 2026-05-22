@@ -5,13 +5,17 @@ import { getTopMoves } from './smogonStats.js';
 
 export const gen = Generations.get(9);
 
-function buildField(weather, defenderScreens = {}) {
+function buildField(weather, defenderOptions = {}, attackerOptions = {}) {
   return new Field({
     gameType: 'Doubles',
     ...(weather ? { weather } : {}),
+    attackerSide: new Side({
+      isHelpingHand: attackerOptions.isHelpingHand ?? false,
+    }),
     defenderSide: new Side({
-      isReflect:     defenderScreens.reflect      ?? false,
-      isLightScreen: defenderScreens.lightScreen  ?? false,
+      isReflect:     defenderOptions.reflect      ?? false,
+      isLightScreen: defenderOptions.lightScreen  ?? false,
+      isFriendGuard: defenderOptions.friendGuard  ?? false,
     }),
   });
 }
@@ -195,9 +199,21 @@ function calcResult(attacker, defender, moveName, field) {
 // --- Main analysis engine ---
 
 export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) {
-  const { weather = null, myScreens = {}, opponentScreens = {} } = fieldOptions;
-  const offenseField  = buildField(weather, opponentScreens); // opponent defends
-  const defenseField  = buildField(weather, myScreens);       // I defend
+  const {
+    weather = null,
+    myScreens = {},
+    opponentScreens = {},
+    myFriendGuard = false,
+    opponentFriendGuard = false,
+    myHelpingHand = {},
+  } = fieldOptions;
+
+  // defenseField is shared (I'm always the defender here)
+  const defenseField = buildField(
+    weather,
+    { ...myScreens, friendGuard: myFriendGuard }
+  );
+  // offenseField is built per-player below (HH is per-Pokémon)
 
   const offense = [];
   const offenseExpanded = [];
@@ -208,6 +224,13 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
   for (const set of playerSets) {
     const playerName = resolveSpeciesName(set.name);
     const playerSpecies = gen.species.get(toSpeciesId(playerName));
+
+    // Build offense field per-player to apply per-Pokémon Helping Hand
+    const offenseField = buildField(
+      weather,
+      { ...opponentScreens, friendGuard: opponentFriendGuard },
+      { isHelpingHand: myHelpingHand[playerName] ?? false }
+    );
     if (!playerSpecies) continue;
 
     const offenseMoves = set.moves.filter(m => !MOVES_TO_SKIP.has(m));
@@ -358,7 +381,10 @@ export async function computeIncomingMove(moveName, opponentName, playerSets, fi
   const cat = getMoveCategory(moveName);
   if (cat === 'status') return [];
 
-  const field = buildField(fieldOptions.weather ?? null, fieldOptions.myScreens ?? {});
+  const field = buildField(
+    fieldOptions.weather ?? null,
+    { ...fieldOptions.myScreens ?? {}, friendGuard: fieldOptions.myFriendGuard ?? false }
+  );
 
   const archetypes = cat === 'special'
     ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
@@ -391,7 +417,10 @@ export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOp
   const playerName  = resolveSpeciesName(playerSet.name);
   const atkStat = cat === 'special' ? 'spa' : 'atk';
   const defStat = cat === 'special' ? 'spd' : 'def';
-  const field   = buildField(fieldOptions.weather ?? null, fieldOptions.myScreens ?? {});
+  const field = buildField(
+    fieldOptions.weather ?? null,
+    { ...fieldOptions.myScreens ?? {}, friendGuard: fieldOptions.myFriendGuard ?? false }
+  );
 
   const grid = {};
   for (const oppStage of STAGES) {

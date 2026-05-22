@@ -1,12 +1,15 @@
 const ZERO = () => ({ atk: 0, spa: 0, def: 0, spd: 0, spe: 0 });
 
 const state = {
-  myStages:        {},  // { pokemonName: { atk, spa, def, spd, spe } }
-  opponentStages:  {},  // { pokemonName: { atk, spa, def, spd, spe } }
-  opponentMoves:   {},  // { pokemonName: [{ name, calcs, defGrids }] }
-  weather:         null, // 'Sun' | 'Rain' | 'Sand' | 'Snow' | null
-  myScreens:       { reflect: false, lightScreen: false },
-  opponentScreens: { reflect: false, lightScreen: false },
+  myStages:            {},   // { pokemonName: { atk, spa, def, spd, spe } }
+  opponentStages:      {},   // { pokemonName: { atk, spa, def, spd, spe } }
+  opponentMoves:       {},   // { pokemonName: [{ name, calcs, defGrids }] }
+  weather:             null, // 'Sun' | 'Rain' | 'Sand' | 'Snow' | null
+  myScreens:           { reflect: false, lightScreen: false },
+  opponentScreens:     { reflect: false, lightScreen: false },
+  myFriendGuard:       false,
+  opponentFriendGuard: false,
+  myHelpingHand:       {},   // { pokemonName: boolean }
 };
 
 const listeners = new Set();
@@ -17,12 +20,15 @@ export function getState()      { return state; }
 function notify() { listeners.forEach(fn => fn(state)); }
 
 export function initTracker(playerNames, opponentNames) {
-  state.myStages       = Object.fromEntries(playerNames.map(n => [n, ZERO()]));
-  state.opponentStages = Object.fromEntries(opponentNames.map(n => [n, ZERO()]));
-  state.opponentMoves  = Object.fromEntries(opponentNames.map(n => [n, []]));
-  state.weather        = null;
-  state.myScreens      = { reflect: false, lightScreen: false };
-  state.opponentScreens = { reflect: false, lightScreen: false };
+  state.myStages           = Object.fromEntries(playerNames.map(n => [n, ZERO()]));
+  state.opponentStages     = Object.fromEntries(opponentNames.map(n => [n, ZERO()]));
+  state.opponentMoves      = Object.fromEntries(opponentNames.map(n => [n, []]));
+  state.weather            = null;
+  state.myScreens          = { reflect: false, lightScreen: false };
+  state.opponentScreens    = { reflect: false, lightScreen: false };
+  state.myFriendGuard      = false;
+  state.opponentFriendGuard = false;
+  state.myHelpingHand      = Object.fromEntries(playerNames.map(n => [n, false]));
   notify();
 }
 
@@ -73,6 +79,40 @@ export function setMyScreen(type, value) {
 
 export function setOpponentScreen(type, value) {
   state.opponentScreens[type] = value;
+  notify();
+}
+
+// ---- Friend Guard (field-level per side) ----
+
+export function setMyFriendGuard(value) {
+  state.myFriendGuard = value;
+  notify();
+}
+
+export function setOpponentFriendGuard(value) {
+  state.opponentFriendGuard = value;
+  notify();
+}
+
+// ---- Helping Hand (per Pokémon, attacker side) ----
+
+export function toggleMyHelpingHand(name) {
+  if (!(name in state.myHelpingHand)) return;
+  state.myHelpingHand[name] = !state.myHelpingHand[name];
+  notify();
+}
+
+// ---- KO / Remove from tracker ----
+
+export function removeMyPokemon(name) {
+  delete state.myStages[name];
+  delete state.myHelpingHand[name];
+  notify();
+}
+
+export function removeOpponentPokemon(name) {
+  delete state.opponentStages[name];
+  delete state.opponentMoves[name];
   notify();
 }
 

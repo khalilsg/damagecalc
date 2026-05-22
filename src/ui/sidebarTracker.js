@@ -3,6 +3,9 @@ import {
   resetMyStages, resetOpponentStages,
   addOpponentMove, removeOpponentMove,
   setWeather, setMyScreen, setOpponentScreen,
+  setMyFriendGuard, setOpponentFriendGuard,
+  toggleMyHelpingHand,
+  removeMyPokemon, removeOpponentPokemon,
 } from '../battleTracker.js';
 import { computeIncomingMove, computeDefenseExpGrid } from '../calcEngine.js';
 
@@ -40,7 +43,7 @@ export function renderSidebarTracker(container, state, playerSets) {
 
   appendSection(container, 'My Team');
   for (const [name, stages] of Object.entries(state.myStages)) {
-    container.appendChild(makeMyCard(name, stages));
+    container.appendChild(makeMyCard(name, stages, state.myHelpingHand?.[name] ?? false));
   }
 
   appendSection(container, 'Opponents');
@@ -78,6 +81,30 @@ function makeFieldControls(state) {
   wrap.appendChild(oppLabel);
   wrap.appendChild(makeScreenRow(state.opponentScreens, (type, val) => setOpponentScreen(type, val)));
 
+  // My Friend Guard
+  const myFgLabel = el('div', 'field-row-label');
+  myFgLabel.textContent = 'My Side';
+  wrap.appendChild(myFgLabel);
+  const myFgRow = el('div', 'field-btn-row');
+  const myFgBtn = el('button', `field-btn${state.myFriendGuard ? ' active' : ''}`);
+  myFgBtn.textContent = 'Friend Guard';
+  myFgBtn.title = 'Partner has Friend Guard — halves damage I take';
+  myFgBtn.addEventListener('click', () => setMyFriendGuard(!state.myFriendGuard));
+  myFgRow.appendChild(myFgBtn);
+  wrap.appendChild(myFgRow);
+
+  // Opponent Friend Guard
+  const oppFgLabel = el('div', 'field-row-label');
+  oppFgLabel.textContent = 'Opp Side';
+  wrap.appendChild(oppFgLabel);
+  const oppFgRow = el('div', 'field-btn-row');
+  const oppFgBtn = el('button', `field-btn${state.opponentFriendGuard ? ' active' : ''}`);
+  oppFgBtn.textContent = 'Friend Guard';
+  oppFgBtn.title = 'Opponent partner has Friend Guard — halves damage they take';
+  oppFgBtn.addEventListener('click', () => setOpponentFriendGuard(!state.opponentFriendGuard));
+  oppFgRow.appendChild(oppFgBtn);
+  wrap.appendChild(oppFgRow);
+
   return wrap;
 }
 
@@ -98,21 +125,37 @@ function appendSection(container, title) {
   container.appendChild(h);
 }
 
-function makeMyCard(name, stages) {
+function makeMyCard(name, stages, hasHH) {
   const card = el('div', 'tracker-card');
-  card.appendChild(makeCardHeader(name, () => resetMyStages(name)));
+  card.appendChild(makeCardHeader(name,
+    () => resetMyStages(name),
+    () => removeMyPokemon(name),
+  ));
   for (const { label, key } of STATS) {
     card.appendChild(makeStatRow(label, stages[key] ?? 0,
       () => adjustMyStage(name, key, -1),
       () => adjustMyStage(name, key, +1),
     ));
   }
+
+  // Helping Hand toggle
+  const footer = el('div', 'card-footer-row');
+  const hhBtn = el('button', `hh-btn${hasHH ? ' active' : ''}`);
+  hhBtn.textContent = 'Helping Hand';
+  hhBtn.title = hasHH ? 'Helping Hand active (+50% damage) — click to remove' : 'Toggle Helping Hand for this turn';
+  hhBtn.addEventListener('click', () => toggleMyHelpingHand(name));
+  footer.appendChild(hhBtn);
+  card.appendChild(footer);
+
   return card;
 }
 
 function makeOpponentCard(name, stages, trackedMoves, playerSets, state) {
   const card = el('div', 'tracker-card');
-  card.appendChild(makeCardHeader(name, () => resetOpponentStages(name)));
+  card.appendChild(makeCardHeader(name,
+    () => resetOpponentStages(name),
+    () => removeOpponentPokemon(name),
+  ));
 
   for (const { label, key } of STATS) {
     card.appendChild(makeStatRow(label, stages[key] ?? 0,
@@ -161,9 +204,10 @@ function makeOpponentCard(name, stages, trackedMoves, playerSets, state) {
     logBtn.disabled = true;
     try {
       const fieldOptions = {
-        weather:        state.weather,
-        myScreens:      state.myScreens,
+        weather:         state.weather,
+        myScreens:       state.myScreens,
         opponentScreens: state.opponentScreens,
+        myFriendGuard:   state.myFriendGuard,
       };
       const calcs = await computeIncomingMove(moveName, name, playerSets, fieldOptions);
       const defGrids = (playerSets ?? []).flatMap(set => {
@@ -189,15 +233,20 @@ function makeOpponentCard(name, stages, trackedMoves, playerSets, state) {
   return card;
 }
 
-function makeCardHeader(name, onReset) {
+function makeCardHeader(name, onReset, onKO) {
   const header = el('div', 'tracker-card-header');
   const nameEl = el('span', 'tracker-poke-name');
   nameEl.textContent = name;
   const resetBtn = el('button', 'tracker-reset-btn');
   resetBtn.textContent = 'Reset';
   resetBtn.addEventListener('click', onReset);
+  const koBtn = el('button', 'ko-btn');
+  koBtn.textContent = '✕';
+  koBtn.title = 'KO — remove from tracker';
+  koBtn.addEventListener('click', onKO);
   header.appendChild(nameEl);
   header.appendChild(resetBtn);
+  header.appendChild(koBtn);
   return header;
 }
 
