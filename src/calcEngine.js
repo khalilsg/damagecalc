@@ -41,7 +41,7 @@ const DEFENSE_ARCHETYPES = [
 const MIN_DEFENSE = DEFENSE_ARCHETYPES[2];
 const MIN_OFFENSE = OFFENSE_ARCHETYPES[2];
 
-const STAGES = [-2, -1, 0, 1, 2];
+const STAGES = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
 
 // --- Name resolution ---
 

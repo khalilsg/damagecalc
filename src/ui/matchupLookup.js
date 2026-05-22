@@ -211,7 +211,7 @@ function emptyNote(text) {
   return d;
 }
 
-function clampStage(n) { return Math.max(-2, Math.min(2, n ?? 0)); }
+function clampStage(n) { return Math.max(-6, Math.min(6, n ?? 0)); }
 
 function koClass(c) {
   if (c === 'guaranteed-ohko') return 'ko-guaranteed';
