@@ -136,10 +136,21 @@ function resolveItem(name) {
   return gen.items.get(id)?.name ?? undefined;
 }
 
+// Champions format: 32 EVs produces the same stat as 252 standard EVs.
+// Scale before passing to @smogon/calc, which uses the standard EV formula (floor(ev/4)).
+function scaleEVs(evs) {
+  const SCALE = 252 / 32; // 7.875
+  const out = {};
+  for (const [k, v] of Object.entries(evs ?? {})) {
+    out[k] = Math.min(252, Math.round((v ?? 0) * SCALE));
+  }
+  return out;
+}
+
 function makeAttacker(set, resolvedName, boostOverrides = {}) {
   const p = new Pokemon(gen, resolvedName, {
     level:  set.level,
-    evs:    set.evs,
+    evs:    scaleEVs(set.evs),
     ivs:    set.ivs,
     nature: set.nature,
     ability: set.ability,
@@ -155,7 +166,7 @@ function makeAttacker(set, resolvedName, boostOverrides = {}) {
 function makeArchetypeOpponent(resolvedName, archetype, boostOverrides = {}) {
   const p = new Pokemon(gen, resolvedName, {
     level:  50,
-    evs:    archetype.evs,
+    evs:    scaleEVs(archetype.evs),
     nature: archetype.nature,
   });
   if (Object.keys(boostOverrides).length > 0) {

@@ -10,10 +10,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "pokebench": "node pokebench/index.js"
   },
   "dependencies": {
-    "@smogon/calc": "^0.11.0"
+    "@smogon/calc": "^0.11.0",
+    "commander": "^14.0.3"
   },
   "devDependencies": {
     "vite": "^8.0.8"

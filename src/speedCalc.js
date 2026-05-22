@@ -11,6 +11,12 @@ const NATURE_SPEED_MODIFIERS = {
   Calm: 1.0, Gentle: 1.0, Sassy: 0.9, Careful: 1.0, Quirky: 1.0,
 };
 
+// Champions format: 32 EVs produces the same stat as 252 standard EVs.
+// Scale before using the standard EV formula (floor(ev/4)).
+function scaleEV(championsEV) {
+  return Math.min(252, Math.round((championsEV ?? 0) * (252 / 32)));
+}
+
 export function calcSpeed(base, iv = 31, ev = 0, level = 50, nature = 'Serious') {
   const mod = NATURE_SPEED_MODIFIERS[nature] ?? 1.0;
   return Math.floor(Math.floor((2 * base + iv + Math.floor(ev / 4)) * level / 100 + 5) * mod);
@@ -37,7 +43,7 @@ export function applySpeedModifier(speed, modifier) {
  */
 export function getPlayerSpeedScenarios(baseSpeed, set) {
   const iv     = set.ivs?.spe ?? 31;
-  const ev     = set.evs?.spe ?? 0;
+  const ev     = scaleEV(set.evs?.spe ?? 0);
   const nature = set.nature ?? 'Serious';
   const level  = set.level ?? 50;
   const base   = calcSpeed(baseSpeed, iv, ev, level, nature);
@@ -72,9 +78,9 @@ export function getPlayerSpeedScenarios(baseSpeed, set) {
  * Full: adds +1/+2 stage, scarf, tailwind variants.
  */
 export function getOpponentSpeedScenarios(baseSpeed) {
-  const min      = calcSpeed(baseSpeed, 31,  0, 50, 'Serious');
-  const maxNeu   = calcSpeed(baseSpeed, 31, 32, 50, 'Serious');
-  const maxPos   = calcSpeed(baseSpeed, 31, 32, 50, 'Jolly');
+  const min      = calcSpeed(baseSpeed, 31, scaleEV( 0), 50, 'Serious');
+  const maxNeu   = calcSpeed(baseSpeed, 31, scaleEV(32), 50, 'Serious');
+  const maxPos   = calcSpeed(baseSpeed, 31, scaleEV(32), 50, 'Jolly');
 
   const basic = [
     { label: '',   speed: min,    isBasic: true },   // bare name
