@@ -1,10 +1,20 @@
-import { Generations, Pokemon, Move, Field, calculate } from '@smogon/calc';
+import { Generations, Pokemon, Move, Field, Side, calculate } from '@smogon/calc';
 import { getPlayerSpeedScenarios, getOpponentSpeedScenarios } from './speedCalc.js';
 import { SETDEX_CHAMPIONS } from './champions.js';
 import { getTopMoves } from './smogonStats.js';
 
 export const gen = Generations.get(9);
-export const field = new Field({ gameType: 'Doubles' });
+
+function buildField(weather, defenderScreens = {}) {
+  return new Field({
+    gameType: 'Doubles',
+    ...(weather ? { weather } : {}),
+    defenderSide: new Side({
+      isReflect:     defenderScreens.reflect      ?? false,
+      isLightScreen: defenderScreens.lightScreen  ?? false,
+    }),
+  });
+}
 
 const MOVES_TO_SKIP = new Set([
   'Protect', 'Wide Guard', 'Quick Guard', 'Parting Shot',
@@ -162,7 +172,7 @@ function classifyKO(kochance) {
   return null;
 }
 
-function calcResult(attacker, defender, moveName) {
+function calcResult(attacker, defender, moveName, field) {
   try {
     const move = new Move(gen, moveName);
     const result = calculate(gen, attacker, defender, move, field);
@@ -184,7 +194,11 @@ function calcResult(attacker, defender, moveName) {
 
 // --- Main analysis engine ---
 
-export async function runAnalysis(playerSets, opponentNames) {
+export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) {
+  const { weather = null, myScreens = {}, opponentScreens = {} } = fieldOptions;
+  const offenseField  = buildField(weather, opponentScreens); // opponent defends
+  const defenseField  = buildField(weather, myScreens);       // I defend
+
   const offense = [];
   const offenseExpanded = [];
   const defense = [];
@@ -233,7 +247,7 @@ export async function runAnalysis(playerSets, opponentNames) {
             : DEFENSE_ARCHETYPES;
           for (const arch of archetypes) {
             const defender = makeArchetypeOpponent(resolvedOpp, arch);
-            const r = calcResult(attacker, defender, moveName);
+            const r = calcResult(attacker, defender, moveName, offenseField);
             if (r) rows.push({ ...r, archetype: arch.label });
           }
         }
@@ -253,7 +267,7 @@ export async function runAnalysis(playerSets, opponentNames) {
           for (const oppStage of STAGES) {
             const attacker = makeAttacker(set, playerName, { [atkStat]: myStage });
             const defender = makeArchetypeOpponent(resolvedOpp, MIN_DEFENSE, { [defStat]: oppStage });
-            grid[`${myStage},${oppStage}`] = calcResult(attacker, defender, moveName);
+            grid[`${myStage},${oppStage}`] = calcResult(attacker, defender, moveName, offenseField);
           }
         }
         offExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
@@ -276,7 +290,7 @@ export async function runAnalysis(playerSets, opponentNames) {
           const attacker = makeArchetypeOpponent(resolvedOpp, arch);
           for (const boostSc of boostScenarios) {
             const defender = makeAttacker(set, playerName, boostSc.boosts);
-            const r = calcResult(attacker, defender, moveName);
+            const r = calcResult(attacker, defender, moveName, defenseField);
             if (r) {
               defMatchup.scenarios.push({
                 label: boostSc.label,
@@ -301,7 +315,7 @@ export async function runAnalysis(playerSets, opponentNames) {
           for (const myStage of STAGES) {
             const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
             const defender = makeAttacker(set, playerName, { [defStat]: myStage });
-            grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName);
+            grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName, defenseField);
           }
         }
         defExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
@@ -337,12 +351,14 @@ export async function runAnalysis(playerSets, opponentNames) {
   return { offense, offenseExpanded, defense, defenseExpanded, speed };
 }
 
-// Compute how a single opponent move hits each player pokemon.
+// Compute how a single opponent move hits each player pokemon (for LIVE badge in defense tab).
 // Returns [{ playerName, rows: [{ ...calcResult, archetype }] }]
-export async function computeIncomingMove(moveName, opponentName, playerSets) {
+export async function computeIncomingMove(moveName, opponentName, playerSets, fieldOptions = {}) {
   const resolvedOpp = resolveSpeciesName(opponentName);
   const cat = getMoveCategory(moveName);
   if (cat === 'status') return [];
+
+  const field = buildField(fieldOptions.weather ?? null, fieldOptions.myScreens ?? {});
 
   const archetypes = cat === 'special'
     ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
@@ -357,10 +373,33 @@ export async function computeIncomingMove(moveName, opponentName, playerSets) {
     for (const arch of archetypes) {
       const attacker = makeArchetypeOpponent(resolvedOpp, arch);
       const defender = makeAttacker(set, playerName);
-      const r = calcResult(attacker, defender, moveName);
+      const r = calcResult(attacker, defender, moveName, field);
       if (r) rows.push({ ...r, archetype: arch.label });
     }
     if (rows.length > 0) results.push({ playerName, rows });
   }
   return results;
+}
+
+// Precompute the 25-cell defense-expanded grid for a tracked move (synchronous).
+// Returns { playerName, moveName, category, grid } or null for status moves.
+export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOptions = {}) {
+  const cat = getMoveCategory(moveName);
+  if (cat === 'status') return null;
+
+  const resolvedOpp = resolveSpeciesName(opponentName);
+  const playerName  = resolveSpeciesName(playerSet.name);
+  const atkStat = cat === 'special' ? 'spa' : 'atk';
+  const defStat = cat === 'special' ? 'spd' : 'def';
+  const field   = buildField(fieldOptions.weather ?? null, fieldOptions.myScreens ?? {});
+
+  const grid = {};
+  for (const oppStage of STAGES) {
+    for (const myStage of STAGES) {
+      const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
+      const defender = makeAttacker(playerSet, playerName, { [defStat]: myStage });
+      grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName, field);
+    }
+  }
+  return { playerName, moveName, category: cat, grid };
 }

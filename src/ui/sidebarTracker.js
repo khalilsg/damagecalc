@@ -2,8 +2,9 @@ import {
   adjustMyStage, adjustOpponentStage,
   resetMyStages, resetOpponentStages,
   addOpponentMove, removeOpponentMove,
+  setWeather, setMyScreen, setOpponentScreen,
 } from '../battleTracker.js';
-import { computeIncomingMove } from '../calcEngine.js';
+import { computeIncomingMove, computeDefenseExpGrid } from '../calcEngine.js';
 
 const STATS = [
   { label: 'Atk', key: 'atk' },
@@ -13,10 +14,23 @@ const STATS = [
   { label: 'Spe', key: 'spe' },
 ];
 
+const WEATHER_OPTIONS = [
+  { label: 'Sun',  value: 'Sun'  },
+  { label: 'Rain', value: 'Rain' },
+  { label: 'Sand', value: 'Sand' },
+  { label: 'Snow', value: 'Snow' },
+];
+
 export function renderSidebarTracker(container, state, playerSets) {
   container.innerHTML = '';
 
   const hasData = Object.keys(state.myStages).length > 0;
+
+  // ---- Field conditions (always shown if tracker is initialized) ----
+  if (hasData) {
+    container.appendChild(makeFieldControls(state));
+  }
+
   if (!hasData) {
     const placeholder = el('p', 'tracker-placeholder');
     placeholder.textContent = 'Run an analysis to start tracking.';
@@ -31,8 +45,51 @@ export function renderSidebarTracker(container, state, playerSets) {
 
   appendSection(container, 'Opponents');
   for (const [name, stages] of Object.entries(state.opponentStages)) {
-    container.appendChild(makeOpponentCard(name, stages, state.opponentMoves[name] ?? [], playerSets));
+    container.appendChild(makeOpponentCard(name, stages, state.opponentMoves[name] ?? [], playerSets, state));
   }
+}
+
+function makeFieldControls(state) {
+  const wrap = el('div', 'field-controls');
+
+  // Weather
+  const wLabel = el('div', 'field-row-label');
+  wLabel.textContent = 'Weather';
+  wrap.appendChild(wLabel);
+
+  const wBtns = el('div', 'field-btn-row');
+  for (const { label, value } of WEATHER_OPTIONS) {
+    const btn = el('button', `field-btn${state.weather === value ? ' active' : ''}`);
+    btn.textContent = label;
+    btn.addEventListener('click', () => setWeather(value));
+    wBtns.appendChild(btn);
+  }
+  wrap.appendChild(wBtns);
+
+  // My screens
+  const myLabel = el('div', 'field-row-label');
+  myLabel.textContent = 'My Screens';
+  wrap.appendChild(myLabel);
+  wrap.appendChild(makeScreenRow(state.myScreens, (type, val) => setMyScreen(type, val)));
+
+  // Opponent screens
+  const oppLabel = el('div', 'field-row-label');
+  oppLabel.textContent = 'Opp Screens';
+  wrap.appendChild(oppLabel);
+  wrap.appendChild(makeScreenRow(state.opponentScreens, (type, val) => setOpponentScreen(type, val)));
+
+  return wrap;
+}
+
+function makeScreenRow(screens, onChange) {
+  const row = el('div', 'field-btn-row');
+  for (const [type, label] of [['reflect', 'Reflect'], ['lightScreen', 'Light Screen']]) {
+    const btn = el('button', `field-btn${screens[type] ? ' active' : ''}`);
+    btn.textContent = label;
+    btn.addEventListener('click', () => onChange(type, !screens[type]));
+    row.appendChild(btn);
+  }
+  return row;
 }
 
 function appendSection(container, title) {
@@ -53,7 +110,7 @@ function makeMyCard(name, stages) {
   return card;
 }
 
-function makeOpponentCard(name, stages, trackedMoves, playerSets) {
+function makeOpponentCard(name, stages, trackedMoves, playerSets, state) {
   const card = el('div', 'tracker-card');
   card.appendChild(makeCardHeader(name, () => resetOpponentStages(name)));
 
@@ -103,8 +160,17 @@ function makeOpponentCard(name, stages, trackedMoves, playerSets) {
     logBtn.textContent = '…';
     logBtn.disabled = true;
     try {
-      const calcs = await computeIncomingMove(moveName, name, playerSets);
-      addOpponentMove(name, moveName, calcs);
+      const fieldOptions = {
+        weather:        state.weather,
+        myScreens:      state.myScreens,
+        opponentScreens: state.opponentScreens,
+      };
+      const calcs = await computeIncomingMove(moveName, name, playerSets, fieldOptions);
+      const defGrids = (playerSets ?? []).flatMap(set => {
+        const g = computeDefenseExpGrid(moveName, name, set, fieldOptions);
+        return g ? [g] : [];
+      });
+      addOpponentMove(name, moveName, calcs, defGrids);
       input.value = '';
     } catch (e) {
       console.warn('Could not log move:', e.message);

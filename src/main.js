@@ -13,13 +13,40 @@ import { renderSidebarTracker } from './ui/sidebarTracker.js';
 
 preloadStats();
 
-// Module-level state — kept so the tracker subscriber can re-render
-let analysisData   = null;
+let analysisData      = null;
 let currentPlayerSets = null;
-let unsubscribe    = null;
+let currentOpponents  = [];  // resolved names
+let unsubscribe       = null;
+let lastFieldKey      = '';
+let reanalyzing       = false;
 
-function renderReactive(state) {
+function fieldKey(state) {
+  return `${state.weather}|${state.myScreens.reflect}|${state.myScreens.lightScreen}|${state.opponentScreens.reflect}|${state.opponentScreens.lightScreen}`;
+}
+
+async function renderReactive(state) {
   if (!analysisData) return;
+
+  // Re-run full analysis when weather or screens change
+  const key = fieldKey(state);
+  if (key !== lastFieldKey && !reanalyzing) {
+    lastFieldKey = key;
+    reanalyzing  = true;
+    try {
+      analysisData = await runAnalysis(currentPlayerSets, currentOpponents, {
+        weather:        state.weather,
+        myScreens:      state.myScreens,
+        opponentScreens: state.opponentScreens,
+      });
+      renderSummary(analysisData, document.getElementById('tab-summary'));
+      renderOffense(analysisData.offense, document.getElementById('tab-offense'));
+    } catch (e) {
+      console.warn('Re-analysis failed:', e);
+    } finally {
+      reanalyzing = false;
+    }
+  }
+
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
   renderOffenseExpanded(analysisData.offenseExpanded, document.getElementById('tab-offense-exp'), state);
   renderDefenseExpanded(analysisData.defenseExpanded, document.getElementById('tab-defense-exp'), state);
@@ -78,7 +105,7 @@ function renderDropdown(query) {
   dropdownItems = [];
   activeIndex = -1;
   if (matches.length === 0) { dropdown.classList.remove('open'); return; }
-  matches.forEach((name, i) => {
+  matches.forEach(name => {
     const item = document.createElement('div');
     item.className = 'dropdown-item';
     item.textContent = name;
@@ -185,17 +212,15 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
   btn.disabled = false;
 
   currentPlayerSets = playerSets;
+  currentOpponents  = [...new Set(analysisData.offense.flatMap(o => o.matchups.map(m => m.opponentName)))];
+  lastFieldKey      = '';  // reset so field controls take effect on next change
 
-  // Re-subscribe (new analysis = fresh tracker state)
   if (unsubscribe) unsubscribe();
   unsubscribe = subscribe(renderReactive);
 
-  // Init tracker — triggers notify → renderReactive via subscriber
-  const playerNames   = analysisData.offense.map(o => o.playerName);
-  const opponentNames = [...new Set(analysisData.offense.flatMap(o => o.matchups.map(m => m.opponentName)))];
-  initTracker(playerNames, opponentNames);
+  const playerNames = analysisData.offense.map(o => o.playerName);
+  initTracker(playerNames, currentOpponents);  // triggers notify → renderReactive
 
-  // Static tabs (don't react to tracker state)
   renderSummary(analysisData, document.getElementById('tab-summary'));
   renderOffense(analysisData.offense, document.getElementById('tab-offense'));
 

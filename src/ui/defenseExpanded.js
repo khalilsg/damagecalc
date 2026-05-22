@@ -7,10 +7,37 @@ export function renderDefenseExpanded(defenseExpandedData, container, state) {
     section.appendChild(sectionHeader(`▸ ${playerName} (incoming)`));
     const cards = el('div', 'matchup-cards');
     for (const { opponentName, moveCalcs } of matchups) {
-      if (moveCalcs.length === 0) continue;
       const card = el('div', 'matchup-card');
       card.appendChild(cardHeader(`${opponentName} attacking`));
       let hasRows = false;
+
+      // Tracked (live) moves from Battle Tracker — shown first
+      const trackedMoves = state?.opponentMoves?.[opponentName] ?? [];
+      for (const { name: moveName, defGrids } of trackedMoves) {
+        const playerGrid = (defGrids ?? []).find(g => g.playerName === playerName);
+        if (!playerGrid) continue;
+        const { category, grid } = playerGrid;
+        const oppStage = clampStage(category === 'special'
+          ? state?.opponentStages?.[opponentName]?.spa
+          : state?.opponentStages?.[opponentName]?.atk);
+        const myStage = clampStage(category === 'special'
+          ? state?.myStages?.[playerName]?.spd
+          : state?.myStages?.[playerName]?.def);
+        const r = grid[`${oppStage},${myStage}`];
+        if (!r) continue;
+        hasRows = true;
+        const moveLabel = el('div', 'scenario-label in-battle-label');
+        moveLabel.textContent = `★ ${moveName}`;
+        card.appendChild(moveLabel);
+        const row = el('div', `calc-row ${koClass(r.classification)} in-battle-row`);
+        const badge = el('span', 'in-battle-badge');
+        badge.textContent = 'LIVE';
+        row.appendChild(badge);
+        row.appendChild(document.createTextNode(' ' + r.formattedDesc));
+        card.appendChild(row);
+      }
+
+      // Precomputed common moves
       for (const { moveName, category, grid } of moveCalcs) {
         const oppStage = clampStage(category === 'special'
           ? state?.opponentStages?.[opponentName]?.spa
@@ -28,6 +55,7 @@ export function renderDefenseExpanded(defenseExpandedData, container, state) {
         row.textContent = r.formattedDesc;
         card.appendChild(row);
       }
+
       if (hasRows) cards.appendChild(card);
     }
     section.appendChild(cards);

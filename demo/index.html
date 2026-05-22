@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K Calc — Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #111;
+      letter-spacing: 2px;
+      margin-bottom: 2px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+
+    .demo-banner {
+      display: inline-block;
+      background: #222;
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 3px;
+      margin-bottom: 20px;
+    }
+
+    /* ---- Two-column layout ---- */
+    .app-layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .main-content { flex: 1; min-width: 0; }
+
+    /* ---- Status ---- */
+    .status {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    .error { color: #c00; font-size: 0.85rem; margin-bottom: 12px; }
+
+    /* ---- Tabs ---- */
+    .tabs {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 0;
+      border-bottom: 2px solid #ddd;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-bottom: none;
+      color: #666;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 7px 16px;
+      cursor: pointer;
+      border-radius: 5px 5px 0 0;
+    }
+
+    .tab-btn:hover { color: #222; }
+
+    .tab-btn.active {
+      color: #111;
+      font-weight: 600;
+      border-color: #ddd;
+      background: #f4f4f2;
+      border-bottom-color: #f4f4f2;
+      margin-bottom: -2px;
+    }
+
+    .tab-panel { display: none; padding-top: 20px; }
+    .tab-panel.active { display: block; }
+
+    /* ---- Output cards ---- */
+    .player-section { margin-bottom: 28px; }
+
+    .section-header {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #111;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
+      margin-bottom: 12px;
+    }
+
+    .matchup-cards { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    .matchup-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px 14px;
+      min-width: 240px;
+      flex: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .card-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .scenario-label {
+      color: #777;
+      font-size: 0.72rem;
+      margin: 6px 0 2px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .calc-row {
+      font-size: 0.78rem;
+      padding: 2px 0;
+      line-height: 1.5;
+      color: #333;
+    }
+
+    .ko-guaranteed { color: #c00; font-weight: 700; }
+    .ko-chance     { color: #d6600a; font-weight: 700; }
+    .ko-2hko       { color: #8a6900; font-weight: 600; }
+
+    .in-battle-row {
+      background: #fff8e1;
+      border-left: 3px solid #e6a800;
+      padding-left: 6px;
+      border-radius: 2px;
+      margin: 2px 0;
+    }
+
+    .in-battle-badge {
+      background: #e6a800;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    .in-battle-label { color: #b07000; font-weight: 700; }
+
+    /* ---- Speed Ladder ---- */
+    .ladder-header {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #444;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+
+    .speed-ladder { display: flex; flex-direction: column; gap: 3px; max-width: 320px; }
+
+    .speed-entry {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+    }
+
+    .speed-player   { background: #e8f0fe; border-left: 3px solid #1a73e8; }
+    .speed-opponent { background: #fce8e6; border-left: 3px solid #d93025; }
+    .speed-name  { color: #1a1a1a; }
+    .speed-value { color: #666; font-size: 0.78rem; font-weight: 600; }
+
+    /* ---- Summary ---- */
+    .summary-block { margin-bottom: 20px; }
+    .summary-block-header { font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ddd; }
+    .summary-row { font-size: 0.8rem; padding: 2px 0; }
+    .summary-red    { color: #c00; }
+    .summary-orange { color: #d6600a; }
+    .summary-yellow { color: #8a6900; }
+    .summary-cyan   { color: #1a73e8; }
+
+    /* ---- Battle Tracker sidebar ---- */
+    .tracker-sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 24px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px 10px 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    .tracker-sidebar-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #444;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .tracker-section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #aaa;
+      margin: 10px 0 4px;
+    }
+
+    .tracker-placeholder { color: #bbb; font-size: 0.78rem; text-align: center; padding: 20px 0; }
+
+    .tracker-card {
+      background: #f9f9f9;
+      border: 1px solid #e8e8e8;
+      border-radius: 5px;
+      padding: 7px 8px;
+      margin-bottom: 6px;
+    }
+
+    .tracker-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .tracker-poke-name { font-size: 0.8rem; font-weight: 600; color: #222; }
+
+    .tracker-reset-btn {
+      background: none; border: 1px solid #ddd; color: #999;
+      font-size: 0.67rem; padding: 2px 5px; border-radius: 3px; cursor: pointer; font-family: inherit;
+    }
+    .tracker-reset-btn:hover { background: #f0f0f0; color: #555; }
+
+    .stat-row { display: flex; align-items: center; gap: 3px; margin: 1px 0; }
+    .stat-label { font-size: 0.7rem; color: #888; width: 26px; flex-shrink: 0; }
+
+    .stage-sm-btn {
+      background: #ebebeb; border: 1px solid #d0d0d0; color: #444; font-family: inherit;
+      font-size: 0.82rem; width: 20px; height: 20px; border-radius: 3px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; flex-shrink: 0;
+    }
+    .stage-sm-btn:hover { background: #ddd; }
+
+    .stage-val { font-size: 0.76rem; width: 26px; text-align: center; font-weight: 600; color: #666; flex-shrink: 0; }
+    .stage-val.pos { color: #1a73e8; }
+    .stage-val.neg { color: #c00; }
+
+    .moves-section-label { font-size: 0.67rem; color: #bbb; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 7px; margin-bottom: 3px; }
+    .moves-empty { font-size: 0.7rem; color: #ccc; font-style: italic; }
+
+    .move-tag {
+      display: flex; align-items: center; gap: 4px;
+      background: #fff8e1; border: 1px solid #f0d060; border-radius: 3px;
+      padding: 2px 6px; margin: 2px 0; font-size: 0.73rem;
+    }
+    .move-remove-btn { background: none; border: none; color: #c00; cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 0; margin-left: auto; }
+
+    .move-input-row { display: flex; gap: 4px; margin-top: 6px; }
+    .move-input {
+      flex: 1; background: #fff; border: 1px solid #ccc; color: #1a1a1a;
+      font-family: inherit; font-size: 0.76rem; padding: 4px 7px; border-radius: 3px; outline: none; min-width: 0;
+    }
+    .move-input:focus { border-color: #555; }
+    .move-log-btn {
+      background: #222; border: none; color: #fff; font-family: inherit;
+      font-size: 0.73rem; padding: 4px 8px; border-radius: 3px; cursor: pointer; flex-shrink: 0;
+    }
+    .move-log-btn:hover:not(:disabled) { background: #444; }
+    .move-log-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .field-controls {
+      border: 1px solid #e8e8e8; border-radius: 5px; padding: 8px; margin-bottom: 8px; background: #f5f5f5;
+    }
+    .field-row-label {
+      font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+      color: #999; margin-bottom: 4px; margin-top: 6px;
+    }
+    .field-row-label:first-child { margin-top: 0; }
+    .field-btn-row { display: flex; gap: 4px; flex-wrap: wrap; }
+    .field-btn {
+      background: #ebebeb; border: 1px solid #d0d0d0; color: #555; font-family: inherit;
+      font-size: 0.72rem; padding: 3px 8px; border-radius: 3px; cursor: pointer; transition: all 0.1s;
+    }
+    .field-btn:hover { background: #ddd; }
+    .field-btn.active { background: #222; color: #fff; border-color: #222; }
+  </style>
+</head>
+<body>
+  <h1>K CALC</h1>
+  <p class="subtitle">Competitive Pokémon Analysis Engine — Champions Format &nbsp;·&nbsp; <a href="../" style="color:#888;font-size:0.78rem;">Full Tool</a></p>
+  <div class="demo-banner">Demo — Blastzam3 vs SunSand</div>
+
+  <div class="app-layout">
+    <div class="main-content">
+      <div id="status" class="status">Loading analysis…</div>
+      <div id="error" class="error"></div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-summary">Summary</button>
+        <button class="tab-btn" data-tab="tab-offense">My Offense</button>
+        <button class="tab-btn" data-tab="tab-offense-exp">My Offense Expanded</button>
+        <button class="tab-btn" data-tab="tab-defense">My Defense</button>
+        <button class="tab-btn" data-tab="tab-defense-exp">My Defense Expanded</button>
+        <button class="tab-btn" data-tab="tab-speed">Speed Ladder</button>
+      </div>
+
+      <div id="tab-summary"     class="tab-panel active"></div>
+      <div id="tab-offense"     class="tab-panel"></div>
+      <div id="tab-offense-exp" class="tab-panel"></div>
+      <div id="tab-defense"     class="tab-panel"></div>
+      <div id="tab-defense-exp" class="tab-panel"></div>
+      <div id="tab-speed"       class="tab-panel"></div>
+    </div>
+
+    <div class="tracker-sidebar">
+      <div class="tracker-sidebar-title">Battle Tracker</div>
+      <div id="battle-tracker">
+        <p class="tracker-placeholder">Loading…</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/demo.js"></script>
+</body>
+</html>

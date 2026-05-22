@@ -1,9 +1,12 @@
 const ZERO = () => ({ atk: 0, spa: 0, def: 0, spd: 0, spe: 0 });
 
 const state = {
-  myStages:       {},  // { pokemonName: { atk, spa, def, spd, spe } }
-  opponentStages: {},  // { pokemonName: { atk, spa, def, spd, spe } }
-  opponentMoves:  {},  // { pokemonName: [{ name, calcs }] }
+  myStages:        {},  // { pokemonName: { atk, spa, def, spd, spe } }
+  opponentStages:  {},  // { pokemonName: { atk, spa, def, spd, spe } }
+  opponentMoves:   {},  // { pokemonName: [{ name, calcs, defGrids }] }
+  weather:         null, // 'Sun' | 'Rain' | 'Sand' | 'Snow' | null
+  myScreens:       { reflect: false, lightScreen: false },
+  opponentScreens: { reflect: false, lightScreen: false },
 };
 
 const listeners = new Set();
@@ -17,6 +20,9 @@ export function initTracker(playerNames, opponentNames) {
   state.myStages       = Object.fromEntries(playerNames.map(n => [n, ZERO()]));
   state.opponentStages = Object.fromEntries(opponentNames.map(n => [n, ZERO()]));
   state.opponentMoves  = Object.fromEntries(opponentNames.map(n => [n, []]));
+  state.weather        = null;
+  state.myScreens      = { reflect: false, lightScreen: false };
+  state.opponentScreens = { reflect: false, lightScreen: false };
   notify();
 }
 
@@ -40,10 +46,10 @@ export function resetOpponentStages(name) {
   if (state.opponentStages[name]) { state.opponentStages[name] = ZERO(); notify(); }
 }
 
-export function addOpponentMove(name, moveName, calcs) {
+export function addOpponentMove(name, moveName, calcs, defGrids = []) {
   if (!state.opponentMoves[name]) return;
   if (!state.opponentMoves[name].find(m => m.name.toLowerCase() === moveName.toLowerCase())) {
-    state.opponentMoves[name].push({ name: moveName, calcs });
+    state.opponentMoves[name].push({ name: moveName, calcs, defGrids });
     notify();
   }
 }
@@ -51,6 +57,22 @@ export function addOpponentMove(name, moveName, calcs) {
 export function removeOpponentMove(name, moveName) {
   if (!state.opponentMoves[name]) return;
   state.opponentMoves[name] = state.opponentMoves[name].filter(m => m.name !== moveName);
+  notify();
+}
+
+// Toggle weather (press same value to clear)
+export function setWeather(w) {
+  state.weather = state.weather === w ? null : w;
+  notify();
+}
+
+export function setMyScreen(type, value) {
+  state.myScreens[type] = value;
+  notify();
+}
+
+export function setOpponentScreen(type, value) {
+  state.opponentScreens[type] = value;
   notify();
 }
 
