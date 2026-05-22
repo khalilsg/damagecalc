@@ -1,28 +1,33 @@
-/**
- * Phase 2 & 3: Calculation planner and executor.
- * Builds a plan of all calcs to run, then executes them.
- */
-
 import { Generations, Pokemon, Move, Field, calculate } from '@smogon/calc';
-import { getSpeedScenarios, getOpponentSpeedScenarios } from './speedCalc.js';
+import { getPlayerSpeedScenarios, getOpponentSpeedScenarios } from './speedCalc.js';
 import { SETDEX_CHAMPIONS } from './champions.js';
+import { getTopMoves } from './smogonStats.js';
 
 export const gen = Generations.get(9);
 export const field = new Field({ gameType: 'Doubles' });
 
-const MOVES_TO_SKIP = ['Protect', 'Wide Guard', 'Quick Guard', 'Parting Shot', 'Taunt', 'Encore', 'Tailwind'];
+const MOVES_TO_SKIP = new Set([
+  'Protect', 'Wide Guard', 'Quick Guard', 'Parting Shot',
+  'Taunt', 'Encore', 'Tailwind', 'After You', 'Follow Me', 'Helping Hand',
+]);
 
+// Champions format: EVs out of 32 (not 252).
 const OFFENSE_ARCHETYPES = [
-  { label: 'Max SpAtk',   nature: 'Modest',  evs: { hp: 0, atk: 0,   def: 0, spa: 252, spd: 0, spe: 0 } },
-  { label: 'Max Atk',     nature: 'Adamant', evs: { hp: 0, atk: 252, def: 0, spa: 0,   spd: 0, spe: 0 } },
-  { label: 'Min Offense', nature: 'Serious', evs: { hp: 0, atk: 0,   def: 0, spa: 0,   spd: 0, spe: 0 } },
+  { label: 'Max SpAtk',   nature: 'Modest',  evs: { hp: 0, atk: 0,  def: 0, spa: 32, spd: 0, spe: 0 } },
+  { label: 'Max Atk',     nature: 'Adamant', evs: { hp: 0, atk: 32, def: 0, spa: 0,  spd: 0, spe: 0 } },
+  { label: 'Min Offense', nature: 'Serious', evs: { hp: 0, atk: 0,  def: 0, spa: 0,  spd: 0, spe: 0 } },
 ];
 
 const DEFENSE_ARCHETYPES = [
-  { label: 'Max SpDef',   nature: 'Calm',    evs: { hp: 252, atk: 0, def: 0,   spa: 0, spd: 252, spe: 0 } },
-  { label: 'Max Def',     nature: 'Bold',    evs: { hp: 252, atk: 0, def: 252, spa: 0, spd: 0,   spe: 0 } },
-  { label: 'Min Defense', nature: 'Serious', evs: { hp: 0,   atk: 0, def: 0,   spa: 0, spd: 0,   spe: 0 } },
+  { label: 'Max SpDef',   nature: 'Calm',    evs: { hp: 32, atk: 0, def: 0,  spa: 0, spd: 32, spe: 0 } },
+  { label: 'Max Def',     nature: 'Bold',    evs: { hp: 32, atk: 0, def: 32, spa: 0, spd: 0,  spe: 0 } },
+  { label: 'Min Defense', nature: 'Serious', evs: { hp: 0,  atk: 0, def: 0,  spa: 0, spd: 0,  spe: 0 } },
 ];
+
+const MIN_DEFENSE = DEFENSE_ARCHETYPES[2];
+const MIN_OFFENSE = OFFENSE_ARCHETYPES[2];
+
+const STAGES = [-2, -1, 0, 1, 2];
 
 // --- Name resolution ---
 
@@ -59,8 +64,7 @@ export function resolveSpeciesName(name) {
   if (exact) return exact.name;
 
   const lower = aliased.toLowerCase();
-  let bestName = null;
-  let bestDist = Infinity;
+  let bestName = null, bestDist = Infinity;
   for (const species of gen.species) {
     const dist = editDistance(lower, species.name.toLowerCase());
     if (dist < bestDist) { bestDist = dist; bestName = species.name; }
@@ -71,52 +75,41 @@ export function resolveSpeciesName(name) {
 
 export const allSpecies = [...gen.species].filter(s => !s.nfe).map(s => s.name).sort();
 
-// --- Common moves lookup ---
+// --- Common moves lookup (live stats → bundled fallback) ---
 
-function getCommonOffensiveMoves(speciesName) {
+async function getCommonOffensiveMoves(speciesName) {
+  const live = await getTopMoves(speciesName, 3);
+  if (live && live.length > 0) return live;
+  return getBundledMoves(speciesName);
+}
+
+function getBundledMoves(speciesName) {
   const sets = SETDEX_CHAMPIONS[speciesName];
-  if (!sets) return getFallbackMoves(speciesName);
-
-  const moves = new Set();
-  for (const set of Object.values(sets)) {
-    for (const move of (set.moves ?? [])) {
-      if (!move) continue;
-      try {
-        const m = new Move(gen, move);
-        if (m.bp > 0) moves.add(move);
-      } catch { /* skip */ }
-      if (moves.size >= 4) break;
+  if (sets) {
+    const moves = new Set();
+    for (const set of Object.values(sets)) {
+      for (const move of (set.moves ?? [])) {
+        if (!move) continue;
+        try { if (new Move(gen, move).bp > 0) moves.add(move); } catch { /* skip */ }
+        if (moves.size >= 3) break;
+      }
+      if (moves.size >= 3) break;
     }
-    if (moves.size >= 4) break;
+    if (moves.size > 0) return [...moves];
   }
-
-  return moves.size > 0 ? [...moves] : getFallbackMoves(speciesName);
+  return getFallbackMoves(speciesName);
 }
 
 function getFallbackMoves(speciesName) {
   const species = gen.species.get(toSpeciesId(speciesName));
-  const commonPhysical = [
-    'Earthquake', 'Close Combat', 'Facade', 'Body Press',
-    'Knock Off', 'Ice Punch', 'Thunder Punch', 'Fire Punch',
-    'Iron Head', 'Stone Edge', 'Waterfall', 'Play Rough',
-  ];
-  const commonSpecial = [
-    'Moonblast', 'Shadow Ball', 'Energy Ball', 'Ice Beam',
-    'Thunderbolt', 'Flamethrower', 'Surf', 'Psychic',
-    'Dark Pulse', 'Flash Cannon', 'Draco Meteor', 'Focus Blast',
-  ];
-
   const pool = species && species.baseStats.atk >= species.baseStats.spa
-    ? [...commonPhysical, ...commonSpecial]
-    : [...commonSpecial, ...commonPhysical];
+    ? ['Earthquake', 'Close Combat', 'Facade', 'Body Press', 'Knock Off', 'Ice Punch', 'Thunder Punch', 'Fire Punch', 'Iron Head', 'Stone Edge', 'Waterfall', 'Play Rough', 'Moonblast', 'Shadow Ball', 'Energy Ball', 'Ice Beam', 'Thunderbolt', 'Flamethrower', 'Surf', 'Psychic']
+    : ['Moonblast', 'Shadow Ball', 'Energy Ball', 'Ice Beam', 'Thunderbolt', 'Flamethrower', 'Surf', 'Psychic', 'Dark Pulse', 'Flash Cannon', 'Draco Meteor', 'Focus Blast', 'Earthquake', 'Close Combat', 'Facade', 'Body Press'];
 
   const result = [];
-  for (const moveName of pool) {
-    if (result.length >= 4) break;
-    try {
-      const m = new Move(gen, moveName);
-      if (m.bp > 0) result.push(moveName);
-    } catch { /* skip */ }
+  for (const name of pool) {
+    if (result.length >= 3) break;
+    try { if (new Move(gen, name).bp > 0) result.push(name); } catch { /* skip */ }
   }
   return result;
 }
@@ -124,222 +117,235 @@ function getFallbackMoves(speciesName) {
 // --- Pokemon constructors ---
 
 function makeAttacker(set, resolvedName, boostOverrides = {}) {
-  const pokemon = new Pokemon(gen, resolvedName, {
-    level: set.level,
-    evs: set.evs,
-    ivs: set.ivs,
+  const p = new Pokemon(gen, resolvedName, {
+    level:  set.level,
+    evs:    set.evs,
+    ivs:    set.ivs,
     nature: set.nature,
     ability: set.ability,
-    item: set.item,
+    item:   set.item,
     ...(set.gender && { gender: set.gender }),
   });
-  for (const [stat, stages] of Object.entries(boostOverrides)) {
-    pokemon.boosts = { ...(pokemon.boosts ?? {}), [stat]: stages };
+  if (Object.keys(boostOverrides).length > 0) {
+    p.boosts = { ...(p.boosts ?? {}), ...boostOverrides };
   }
-  return pokemon;
+  return p;
 }
 
-function makeOpponent(resolvedName, archetype) {
-  return new Pokemon(gen, resolvedName, {
-    level: 50,
-    evs: archetype.evs,
+function makeArchetypeOpponent(resolvedName, archetype, boostOverrides = {}) {
+  const p = new Pokemon(gen, resolvedName, {
+    level:  50,
+    evs:    archetype.evs,
     nature: archetype.nature,
   });
+  if (Object.keys(boostOverrides).length > 0) {
+    p.boosts = { ...(p.boosts ?? {}), ...boostOverrides };
+  }
+  return p;
 }
 
 // --- Damage calc helpers ---
 
-function classifyKochance(kochance) {
+function getMoveCategory(moveName) {
+  try { return new Move(gen, moveName).category?.toLowerCase() ?? 'physical'; } catch { return 'physical'; }
+}
+
+function classifyKO(kochance) {
   if (!kochance || kochance === 'N/A') return null;
   if (kochance === 'guaranteed OHKO') return 'guaranteed-ohko';
   if (kochance.includes('OHKO')) return 'chance-ohko';
   if (kochance.includes('2HKO')) {
     if (kochance.includes('guaranteed')) return '2hko';
-    const match = kochance.match(/([\d.]+)%/);
-    if (match && parseFloat(match[1]) > 50) return '2hko';
+    const m = kochance.match(/([\d.]+)%/);
+    if (m && parseFloat(m[1]) > 50) return '2hko';
   }
   return null;
 }
 
-function formatDesc(desc, opponentName, archetypeLabel) {
-  let out = desc.replace(/^[\d+\s]*(Atk|SpA)\s+/, '');
-  const escapedName = opponentName.replace(/[-]/g, '\\-');
-  out = out.replace(
-    new RegExp(`[\\d\\s/+A-Za-z]*(?:Def|SpD)\\s+${escapedName}`),
-    `${opponentName} (${archetypeLabel})`
-  );
-  return out;
-}
-
-function runDamageCalc(attacker, opponent, moveName, opponentName, archetypeLabel) {
+function calcResult(attacker, defender, moveName) {
   try {
     const move = new Move(gen, moveName);
-    const result = calculate(gen, attacker, opponent, move, field);
+    const result = calculate(gen, attacker, defender, move, field);
     const desc = result.desc();
-    const kochance = result.kochance().text ?? '';
     if (desc.includes('No damage')) return null;
-
+    const kochance = result.kochance().text ?? '';
     const parts = desc.split(' -- ');
-    const formattedBase = formatDesc(parts[0], opponentName, archetypeLabel);
-    const kochanceText = parts[1] ?? kochance;
-
     return {
       move: moveName,
-      formattedDesc: kochanceText ? `${formattedBase} -- ${kochanceText}` : formattedBase,
-      formattedBase,
-      kochanceText,
-      classification: classifyKochance(kochance),
-      archetype: archetypeLabel,
+      formattedDesc: parts[1] ? `${parts[0]} -- ${parts[1]}` : parts[0],
+      formattedBase: parts[0],
+      kochanceText: parts[1] ?? kochance,
+      classification: classifyKO(kochance),
     };
   } catch {
     return null;
   }
 }
 
-function getMoveCategory(moveName) {
-  try {
-    const move = new Move(gen, moveName);
-    return move.category?.toLowerCase() ?? 'physical';
-  } catch {
-    return 'physical';
-  }
-}
+// --- Main analysis engine ---
 
-// --- Main engine ---
-
-export function runAnalysis(playerSets, opponentNames) {
+export async function runAnalysis(playerSets, opponentNames, inBattleMove = '') {
   const offense = [];
+  const offenseExpanded = [];
   const defense = [];
+  const defenseExpanded = [];
   const speed = [];
+
+  const inBattleMoveName = inBattleMove.trim();
+  const inBattleCategory = inBattleMoveName ? getMoveCategory(inBattleMoveName) : null;
 
   for (const set of playerSets) {
     const playerName = resolveSpeciesName(set.name);
     const playerSpecies = gen.species.get(toSpeciesId(playerName));
+    if (!playerSpecies) continue;
 
-    if (!playerSpecies) {
-      console.warn('Species not found, skipping:', playerName);
-      continue;
-    }
+    const offenseMoves = set.moves.filter(m => !MOVES_TO_SKIP.has(m));
+    const damageBoosts = (set.boosts ?? []).filter(b => {
+      const s = b.stat.toLowerCase();
+      return s !== 'spe' && s !== 'speed';
+    });
 
-    const offenseMoves = set.moves.filter(m => !MOVES_TO_SKIP.includes(m));
-
-    // Build all boost scenarios
-    const boostScenarios = [{ label: 'Base', boosts: {}, isSpeBoost: false }];
-    for (const boost of (set.boosts ?? [])) {
-      const statKey = boost.stat.toLowerCase() === 'spatk' ? 'spa'
-        : boost.stat.toLowerCase() === 'atk' ? 'atk'
-        : boost.stat.toLowerCase() === 'def' ? 'def'
-        : boost.stat.toLowerCase() === 'spdef' ? 'spd'
-        : boost.stat.toLowerCase();
-      boostScenarios.push({
-        label: `${boost.modifier > 0 ? '+' : ''}${boost.modifier} ${boost.stat}`,
-        boosts: { [statKey]: boost.modifier },
-        isSpeBoost: statKey === 'spe',
-      });
-    }
-
-    // Speed boosts only affect the speed ladder, not damage calcs
-    const damageBoostScenarios = boostScenarios.filter(s => !s.isSpeBoost);
-
-    const playerOffenseResults = [];
-    const playerDefenseResults = [];
+    const playerOffense = [];
+    const playerOffenseExp = [];
+    const playerDefense = [];
+    const playerDefenseExp = [];
 
     for (const opponentName of opponentNames) {
-      const resolvedOpponentName = resolveSpeciesName(opponentName);
-      const opponentSpecies = gen.species.get(toSpeciesId(resolvedOpponentName));
+      const resolvedOpp = resolveSpeciesName(opponentName);
+      const oppSpecies = gen.species.get(toSpeciesId(resolvedOpp));
+      if (!oppSpecies) continue;
 
-      if (!opponentSpecies) {
-        console.warn('Opponent species not found, skipping:', resolvedOpponentName);
-        continue;
+      // ===================== OFFENSE =====================
+      const offMatchup = { opponentName: resolvedOpp, scenarios: [] };
+
+      const boostScenarios = [{ label: 'Base', boosts: {} }];
+      for (const b of damageBoosts) {
+        const statKey = { spatk: 'spa', spattack: 'spa', atk: 'atk', attack: 'atk', def: 'def', defense: 'def', spdef: 'spd', spdefense: 'spd' }[b.stat.toLowerCase()] ?? b.stat.toLowerCase();
+        boostScenarios.push({ label: `${b.modifier > 0 ? '+' : ''}${b.modifier} ${b.stat}`, boosts: { [statKey]: b.modifier } });
       }
 
-      // --- OFFENSE ---
-      const offenseMatchup = { opponentName: resolvedOpponentName, scenarios: [] };
-
-      for (const boostScenario of damageBoostScenarios) {
-        const attacker = makeAttacker(set, playerName, boostScenario.boosts);
-        const scenarioRows = [];
-
+      for (const boostSc of boostScenarios) {
+        const attacker = makeAttacker(set, playerName, boostSc.boosts);
+        const rows = [];
         for (const moveName of offenseMoves) {
-          const moveType = getMoveCategory(moveName);
-          const archetypes = moveType === 'special'
+          const cat = getMoveCategory(moveName);
+          const archetypes = cat === 'special'
             ? DEFENSE_ARCHETYPES.filter(a => a.label !== 'Max Def')
-            : moveType === 'physical'
+            : cat === 'physical'
             ? DEFENSE_ARCHETYPES.filter(a => a.label !== 'Max SpDef')
             : DEFENSE_ARCHETYPES;
-
-          for (const archetype of archetypes) {
-            const opponent = makeOpponent(resolvedOpponentName, archetype);
-            const result = runDamageCalc(attacker, opponent, moveName, resolvedOpponentName, archetype.label);
-            if (result) scenarioRows.push(result);
+          for (const arch of archetypes) {
+            const defender = makeArchetypeOpponent(resolvedOpp, arch);
+            const r = calcResult(attacker, defender, moveName);
+            if (r) rows.push({ ...r, archetype: arch.label });
           }
         }
-
-        if (scenarioRows.length > 0) {
-          offenseMatchup.scenarios.push({ label: boostScenario.label, rows: scenarioRows });
-        }
+        if (rows.length > 0) offMatchup.scenarios.push({ label: boostSc.label, rows });
       }
+      playerOffense.push(offMatchup);
 
-      playerOffenseResults.push(offenseMatchup);
+      // ===================== OFFENSE EXPANDED =====================
+      const offExpMatchup = { opponentName: resolvedOpp, moveCalcs: [] };
+      for (const moveName of offenseMoves) {
+        const cat = getMoveCategory(moveName);
+        if (cat === 'status') continue;
+        const atkStat = cat === 'special' ? 'spa' : 'atk';
+        const defStat = cat === 'special' ? 'spd' : 'def';
+        const grid = {};
+        for (const myStage of STAGES) {
+          for (const oppStage of STAGES) {
+            const attacker = makeAttacker(set, playerName, { [atkStat]: myStage });
+            const defender = makeArchetypeOpponent(resolvedOpp, MIN_DEFENSE, { [defStat]: oppStage });
+            grid[`${myStage},${oppStage}`] = calcResult(attacker, defender, moveName);
+          }
+        }
+        offExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
+      }
+      playerOffenseExp.push(offExpMatchup);
 
-      // --- DEFENSE ---
-      const defenseMatchup = { opponentName: resolvedOpponentName, scenarios: [] };
-      const commonMoves = getCommonOffensiveMoves(resolvedOpponentName);
+      // ===================== DEFENSE =====================
+      const defMatchup = { opponentName: resolvedOpp, scenarios: [] };
+      const commonMoves = await getCommonOffensiveMoves(resolvedOpp);
 
-      for (const moveName of commonMoves) {
-        const moveType = getMoveCategory(moveName);
-        const archetypes = moveType === 'special'
+      // In-battle move goes first, highlighted
+      const movesToCalc = [];
+      if (inBattleMoveName) {
+        movesToCalc.push({ name: inBattleMoveName, isInBattle: true });
+      }
+      for (const m of commonMoves) movesToCalc.push({ name: m, isInBattle: false });
+
+      for (const { name: moveName, isInBattle } of movesToCalc) {
+        const cat = getMoveCategory(moveName);
+        const archetypes = cat === 'special'
           ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
-          : moveType === 'physical'
+          : cat === 'physical'
           ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max SpAtk')
           : OFFENSE_ARCHETYPES;
 
-        for (const archetype of archetypes) {
-          const attacker = makeOpponent(resolvedOpponentName, archetype);
-
-          for (const boostScenario of damageBoostScenarios) {
-            const defender = makeAttacker(set, playerName, boostScenario.boosts);
-            const result = runDamageCalc(attacker, defender, moveName, playerName, archetype.label);
-            if (result) {
-              defenseMatchup.scenarios.push({
-                label: boostScenario.label,
-                rows: [{ ...result, move: moveName }],
+        for (const arch of archetypes) {
+          const attacker = makeArchetypeOpponent(resolvedOpp, arch);
+          for (const boostSc of boostScenarios) {
+            const defender = makeAttacker(set, playerName, boostSc.boosts);
+            const r = calcResult(attacker, defender, moveName);
+            if (r) {
+              defMatchup.scenarios.push({
+                label: boostSc.label,
+                rows: [{ ...r, archetype: arch.label, isInBattle }],
               });
             }
           }
         }
       }
+      playerDefense.push(defMatchup);
 
-      playerDefenseResults.push(defenseMatchup);
+      // ===================== DEFENSE EXPANDED =====================
+      const defExpMatchup = { opponentName: resolvedOpp, moveCalcs: [] };
+      const allDefMoves = inBattleMoveName
+        ? [{ name: inBattleMoveName, isInBattle: true }, ...commonMoves.map(m => ({ name: m, isInBattle: false }))]
+        : commonMoves.map(m => ({ name: m, isInBattle: false }));
 
-      // --- SPEED ---
-      const playerSpeedScenarios = getSpeedScenarios(playerSpecies.baseStats.spe, set);
-      const opponentSpeedScenarios = getOpponentSpeedScenarios(opponentSpecies.baseStats.spe);
-
-      const speedComparisons = [];
-      for (const ps of playerSpeedScenarios) {
-        for (const os of opponentSpeedScenarios) {
-          speedComparisons.push({
-            playerLabel: ps.label,
-            playerSpeed: ps.speed,
-            opponentLabel: os.label,
-            opponentSpeed: os.speed,
-            playerFaster: ps.speed > os.speed,
-            tie: ps.speed === os.speed,
-          });
+      for (const { name: moveName, isInBattle } of allDefMoves) {
+        const cat = getMoveCategory(moveName);
+        if (cat === 'status') continue;
+        const atkStat = cat === 'special' ? 'spa' : 'atk';
+        const defStat = cat === 'special' ? 'spd' : 'def';
+        const grid = {};
+        for (const oppStage of STAGES) {
+          for (const myStage of STAGES) {
+            const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
+            const defender = makeAttacker(set, playerName, { [defStat]: myStage });
+            grid[`${oppStage},${myStage}`] = calcResult(attacker, defender, moveName);
+          }
         }
+        defExpMatchup.moveCalcs.push({ moveName, category: cat, isInBattle, grid });
       }
+      playerDefenseExp.push(defExpMatchup);
+
+      // ===================== SPEED =====================
+      const { basic: pBasic, full: pFull } = getPlayerSpeedScenarios(playerSpecies.baseStats.spe, set);
+      const { basic: oBasic, full: oFull } = getOpponentSpeedScenarios(oppSpecies.baseStats.spe);
+
+      const makeComparisons = (ps, os) => {
+        const out = [];
+        for (const p of ps) for (const o of os) {
+          out.push({ playerLabel: p.label, playerSpeed: p.speed, opponentLabel: o.label, opponentSpeed: o.speed, playerFaster: p.speed > o.speed, tie: p.speed === o.speed });
+        }
+        return out;
+      };
 
       speed.push({
         playerName,
-        opponentName: resolvedOpponentName,
-        comparisons: speedComparisons,
+        opponentName: resolvedOpp,
+        basicComparisons: makeComparisons(pBasic, oBasic),
+        fullComparisons:  makeComparisons(pFull, oFull),
       });
     }
 
-    offense.push({ playerName, matchups: playerOffenseResults });
-    defense.push({ playerName, matchups: playerDefenseResults });
+    offense.push({ playerName, matchups: playerOffense });
+    offenseExpanded.push({ playerName, matchups: playerOffenseExp });
+    defense.push({ playerName, matchups: playerDefense });
+    defenseExpanded.push({ playerName, matchups: playerDefenseExp });
   }
 
-  return { offense, defense, speed };
+  return { offense, offenseExpanded, defense, defenseExpanded, speed };
 }

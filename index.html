@@ -8,79 +8,102 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      background: #0d1117;
-      color: #c9d1d9;
-      font-family: 'Courier New', monospace;
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
       padding: 24px;
       min-height: 100vh;
     }
 
     h1 {
-      color: #58a6ff;
-      margin-bottom: 4px;
       font-size: 1.6rem;
-      letter-spacing: 3px;
+      font-weight: 700;
+      color: #111;
+      letter-spacing: 2px;
+      margin-bottom: 2px;
     }
 
     .subtitle {
-      color: #8b949e;
+      color: #666;
       font-size: 0.8rem;
       margin-bottom: 24px;
-      letter-spacing: 1px;
     }
 
+    /* ---- Inputs ---- */
     .inputs {
       display: flex;
-      gap: 24px;
-      margin-bottom: 20px;
+      gap: 20px;
+      margin-bottom: 16px;
       flex-wrap: wrap;
     }
 
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       flex: 1;
       min-width: 280px;
     }
 
     label {
-      color: #58a6ff;
-      font-size: 0.8rem;
-      letter-spacing: 1px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #444;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
+    .team-top-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #team-select {
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #333;
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    #team-select:focus { outline: none; border-color: #555; }
+
     textarea {
-      background: #161b22;
-      border: 1px solid #30363d;
-      color: #c9d1d9;
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #1a1a1a;
       font-family: 'Courier New', monospace;
       font-size: 0.82rem;
-      padding: 12px;
-      border-radius: 6px;
+      padding: 10px;
+      border-radius: 5px;
       resize: vertical;
-      height: 320px;
+      height: 300px;
       outline: none;
     }
 
-    textarea:focus { border-color: #58a6ff; }
+    textarea:focus { border-color: #555; }
 
     .defender-input-wrapper { position: relative; }
 
     #defender-search {
-      background: #161b22;
-      border: 1px solid #30363d;
-      color: #c9d1d9;
-      font-family: 'Courier New', monospace;
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #1a1a1a;
+      font-family: inherit;
       font-size: 0.85rem;
-      padding: 10px 12px;
-      border-radius: 6px;
+      padding: 8px 10px;
+      border-radius: 5px;
       width: 100%;
       outline: none;
     }
 
-    #defender-search:focus { border-color: #58a6ff; }
+    #defender-search:focus { border-color: #555; }
 
     #dropdown {
       display: none;
@@ -88,233 +111,381 @@
       top: 100%;
       left: 0;
       right: 0;
-      background: #161b22;
-      border: 1px solid #30363d;
+      background: #fff;
+      border: 1px solid #ccc;
       border-top: none;
-      border-radius: 0 0 6px 6px;
+      border-radius: 0 0 5px 5px;
       max-height: 200px;
       overflow-y: auto;
       z-index: 100;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
     }
 
     #dropdown.open { display: block; }
 
     .dropdown-item {
-      padding: 8px 12px;
+      padding: 7px 10px;
       cursor: pointer;
       font-size: 0.85rem;
     }
 
-    .dropdown-item:hover { background: #1f2937; color: #58a6ff; }
+    .dropdown-item:hover, .dropdown-item.dropdown-active {
+      background: #f0f0f0;
+    }
 
     .selected-defenders {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-      min-height: 36px;
+      gap: 6px;
+      margin-top: 6px;
+      min-height: 32px;
     }
 
     .defender-tag {
-      background: #1f2937;
-      border: 1px solid #30363d;
+      background: #e8e8e8;
+      border: 1px solid #ccc;
       border-radius: 4px;
-      padding: 4px 10px;
-      font-size: 0.8rem;
+      padding: 3px 8px;
+      font-size: 0.78rem;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
 
     .defender-tag button {
       background: none;
       border: none;
-      color: #f85149;
+      color: #c00;
       cursor: pointer;
       font-size: 1rem;
       line-height: 1;
       padding: 0;
     }
 
-    #calc-btn {
-      background: #58a6ff22;
-      border: 1px solid #58a6ff;
-      color: #58a6ff;
-      font-family: 'Courier New', monospace;
-      font-size: 1rem;
-      padding: 12px 32px;
-      border-radius: 6px;
+    .clear-btn {
+      background: none;
+      border: 1px solid #ccc;
+      color: #666;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 4px;
       cursor: pointer;
-      letter-spacing: 1px;
-      transition: background 0.2s;
-      margin-bottom: 24px;
     }
 
-    #calc-btn:hover { background: #58a6ff44; }
+    .clear-btn:hover { background: #eee; }
 
-    .error { color: #f85149; font-size: 0.9rem; margin-bottom: 16px; }
+    /* ---- In-battle move ---- */
+    .in-battle-row-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
 
-    /* Tabs */
+    .in-battle-row-group label {
+      white-space: nowrap;
+    }
+
+    #in-battle-move {
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #1a1a1a;
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 7px 10px;
+      border-radius: 5px;
+      outline: none;
+      width: 200px;
+    }
+
+    #in-battle-move:focus { border-color: #555; }
+
+    /* ---- Buttons ---- */
+    #calc-btn {
+      background: #222;
+      border: none;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 10px 28px;
+      border-radius: 5px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.15s;
+      margin-bottom: 20px;
+    }
+
+    #calc-btn:hover:not(:disabled) { background: #444; }
+    #calc-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error { color: #c00; font-size: 0.85rem; margin-bottom: 12px; }
+
+    /* ---- Tabs ---- */
     .tabs {
       display: flex;
-      gap: 4px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid #30363d;
-      padding-bottom: 0;
+      gap: 2px;
+      margin-bottom: 0;
+      border-bottom: 2px solid #ddd;
+      flex-wrap: wrap;
     }
 
     .tab-btn {
       background: none;
       border: 1px solid transparent;
       border-bottom: none;
-      color: #8b949e;
-      font-family: 'Courier New', monospace;
-      font-size: 0.85rem;
-      padding: 8px 20px;
+      color: #666;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 7px 16px;
       cursor: pointer;
-      border-radius: 6px 6px 0 0;
-      letter-spacing: 1px;
-      transition: color 0.2s;
+      border-radius: 5px 5px 0 0;
+      transition: color 0.15s;
     }
 
-    .tab-btn:hover { color: #c9d1d9; }
+    .tab-btn:hover { color: #222; }
 
     .tab-btn.active {
-      color: #58a6ff;
-      border-color: #30363d;
-      background: #161b22;
+      color: #111;
+      font-weight: 600;
+      border-color: #ddd;
+      background: #f4f4f2;
+      border-bottom-color: #f4f4f2;
+      margin-bottom: -2px;
     }
 
-    .tab-panel { display: none; }
+    .tab-panel { display: none; padding-top: 20px; }
     .tab-panel.active { display: block; }
 
-    /* Cards */
+    /* ---- Output cards ---- */
     .player-section { margin-bottom: 28px; }
 
     .section-header {
-      color: #58a6ff;
-      font-size: 1rem;
-      font-weight: bold;
-      letter-spacing: 1px;
-      border-bottom: 1px solid #30363d;
-      padding-bottom: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #111;
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
       margin-bottom: 12px;
+      letter-spacing: 0.3px;
     }
 
     .matchup-cards {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 10px;
     }
 
     .matchup-card {
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 8px;
-      padding: 14px 16px;
-      min-width: 260px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px 14px;
+      min-width: 240px;
       flex: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
 
     .card-header {
-      color: #58a6ff;
-      font-size: 0.88rem;
-      font-weight: bold;
-      margin-bottom: 10px;
-      letter-spacing: 1px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
     }
 
     .scenario-label {
-      color: #8b949e;
-      font-size: 0.75rem;
-      margin: 8px 0 4px;
-      letter-spacing: 1px;
+      color: #777;
+      font-size: 0.72rem;
+      margin: 6px 0 2px;
+      font-weight: 500;
       text-transform: uppercase;
+      letter-spacing: 0.4px;
     }
 
-    .calc-row { font-size: 0.78rem; padding: 2px 0; line-height: 1.5; }
+    .calc-row {
+      font-size: 0.78rem;
+      padding: 2px 0;
+      line-height: 1.5;
+      color: #333;
+    }
 
-    .ko-guaranteed { color: #f85149; font-weight: bold; }
-    .ko-chance     { color: #ff8c00; font-weight: bold; }
-    .ko-2hko       { color: #e3b341; font-weight: bold; }
+    .ko-guaranteed { color: #c00; font-weight: 700; }
+    .ko-chance     { color: #d6600a; font-weight: 700; }
+    .ko-2hko       { color: #8a6900; font-weight: 600; }
 
-    /* Speed Ladder */
+    /* In-battle highlighting */
+    .in-battle-row {
+      background: #fff8e1;
+      border-left: 3px solid #e6a800;
+      padding-left: 6px;
+      border-radius: 2px;
+      margin: 2px 0;
+    }
+
+    .in-battle-badge {
+      background: #e6a800;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin-right: 4px;
+      vertical-align: middle;
+      letter-spacing: 0.5px;
+    }
+
+    .in-battle-label {
+      color: #b07000;
+      font-weight: 700;
+    }
+
+    /* ---- Expanded filter controls ---- */
+    .expanded-controls {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .stage-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .stage-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #444;
+      margin-right: 4px;
+    }
+
+    .stage-btn {
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      color: #555;
+      font-family: inherit;
+      font-size: 0.78rem;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .stage-btn:hover  { background: #e0e0e0; }
+    .stage-btn.active { background: #222; color: #fff; border-color: #222; }
+
+    /* ---- Speed Ladder ---- */
+    .ladder-header {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #444;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 5px;
+      margin-bottom: 10px;
+    }
+
     .speed-ladder {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      max-width: 600px;
+      gap: 3px;
+      max-width: 320px;
     }
 
     .speed-entry {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 14px;
+      padding: 6px 12px;
       border-radius: 4px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
     }
 
-    .speed-player   { background: #1f2937; border-left: 3px solid #58a6ff; }
-    .speed-opponent { background: #1a1a2e; border-left: 3px solid #f85149; }
+    .speed-player   { background: #e8f0fe; border-left: 3px solid #1a73e8; }
+    .speed-opponent { background: #fce8e6; border-left: 3px solid #d93025; }
 
-    .speed-name  { color: #c9d1d9; }
-    .speed-value { color: #8b949e; font-size: 0.8rem; }
+    .speed-name  { color: #1a1a1a; }
+    .speed-value { color: #666; font-size: 0.78rem; font-weight: 600; }
 
-    /* Summary */
-    .summary-block { margin-bottom: 24px; }
+    /* ---- Summary ---- */
+    .summary-block { margin-bottom: 20px; }
 
     .summary-block-header {
-      font-size: 0.95rem;
-      font-weight: bold;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 6px;
       padding-bottom: 4px;
-      border-bottom: 1px solid #30363d;
+      border-bottom: 1px solid #ddd;
     }
 
-    .summary-row { font-size: 0.82rem; padding: 3px 0; }
+    .summary-row { font-size: 0.8rem; padding: 2px 0; }
 
-    .summary-red    { color: #f85149; }
-    .summary-orange { color: #ff8c00; }
-    .summary-yellow { color: #e3b341; }
-    .summary-cyan   { color: #58a6ff; }
+    .summary-red    { color: #c00; }
+    .summary-orange { color: #d6600a; }
+    .summary-yellow { color: #8a6900; }
+    .summary-cyan   { color: #1a73e8; }
   </style>
 </head>
 <body>
-  <h1>K Calc</h1>
-  <p class="subtitle">Competitive Pokémon Analysis Engine</p>
+  <h1>K CALC</h1>
+  <p class="subtitle">Competitive Pokémon Analysis Engine — Champions Format</p>
 
   <div class="inputs">
     <div class="input-group">
       <label>My Team (Showdown Format)</label>
-      <textarea id="team-input" placeholder="Paste your team here...
-Tip: add boost tags like [+1 Atk] on the first line of each set"></textarea>
+      <div class="team-top-row">
+        <select id="team-select">
+          <option value="" disabled selected>Load a saved team…</option>
+        </select>
+      </div>
+      <textarea id="team-input" placeholder="Paste your team here, or load one above.
+Boost tags on the first line: [+2 SpA] [+1 Spe]"></textarea>
     </div>
     <div class="input-group">
       <label>Opponent Threats</label>
       <div class="defender-input-wrapper">
-        <input type="text" id="defender-search" placeholder="Search Pokémon..." autocomplete="off" />
+        <input type="text" id="defender-search" placeholder="Search Pokémon…" autocomplete="off" />
         <div id="dropdown"></div>
       </div>
       <div class="selected-defenders" id="selected-defenders"></div>
     </div>
   </div>
 
+  <div class="in-battle-row-group">
+    <label for="in-battle-move">In-Battle Opponent Move:</label>
+    <input type="text" id="in-battle-move" placeholder="e.g. Astral Barrage" autocomplete="off" />
+    <span style="font-size:0.75rem;color:#888;">Shown first &amp; highlighted in My Defense</span>
+  </div>
+
   <button id="calc-btn">ANALYZE MATCHUP</button>
   <div id="error" class="error"></div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="tab-offense">⚔ My Offense</button>
-    <button class="tab-btn" data-tab="tab-defense">🛡 My Defense</button>
-    <button class="tab-btn" data-tab="tab-speed">⚡ Speed Ladder</button>
-    <button class="tab-btn" data-tab="tab-summary">📋 Summary</button>
+    <button class="tab-btn active" data-tab="tab-summary">Summary</button>
+    <button class="tab-btn" data-tab="tab-offense">My Offense</button>
+    <button class="tab-btn" data-tab="tab-offense-exp">My Offense Expanded</button>
+    <button class="tab-btn" data-tab="tab-defense">My Defense</button>
+    <button class="tab-btn" data-tab="tab-defense-exp">My Defense Expanded</button>
+    <button class="tab-btn" data-tab="tab-speed">Speed Ladder</button>
   </div>
 
-  <div id="tab-offense" class="tab-panel active"></div>
-  <div id="tab-defense" class="tab-panel"></div>
-  <div id="tab-speed" class="tab-panel"></div>
-  <div id="tab-summary" class="tab-panel"></div>
+  <div id="tab-summary"     class="tab-panel active"></div>
+  <div id="tab-offense"     class="tab-panel"></div>
+  <div id="tab-offense-exp" class="tab-panel"></div>
+  <div id="tab-defense"     class="tab-panel"></div>
+  <div id="tab-defense-exp" class="tab-panel"></div>
+  <div id="tab-speed"       class="tab-panel"></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

@@ -1,81 +1,49 @@
 export function renderSpeedLadder(speedData, container) {
   container.innerHTML = '';
 
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;';
+  const basicEntries = [], fullEntries = [];
+  const basicSeen = new Set(), fullSeen = new Set();
 
-  // --- Simple ladder: base player speed vs min/max opponent ---
-  const simpleEntries = [];
-  const simpleSeen = new Set();
-
-  for (const { playerName, opponentName, comparisons } of speedData) {
-    // Player base speed
-    const baseComp = comparisons.find(c => c.playerLabel === 'Base');
-    if (baseComp) {
-      const key = `${playerName}-Base-${baseComp.playerSpeed}`;
-      if (!simpleSeen.has(key)) {
-        simpleSeen.add(key);
-        simpleEntries.push({
-          displayName: playerName,
-          speed: baseComp.playerSpeed,
-          isPlayer: true,
-        });
+  for (const { playerName, opponentName, basicComparisons, fullComparisons } of speedData) {
+    // Basic column
+    for (const c of basicComparisons) {
+      const pk = `player-${playerName}-${c.playerLabel}-${c.playerSpeed}`;
+      if (!basicSeen.has(pk)) {
+        basicSeen.add(pk);
+        basicEntries.push({ displayName: playerName, speed: c.playerSpeed, isPlayer: true });
+      }
+      const ok = `opp-${opponentName}-${c.opponentLabel}-${c.opponentSpeed}`;
+      if (!basicSeen.has(ok)) {
+        basicSeen.add(ok);
+        const suffix = c.opponentLabel; // '', '+', '++'
+        basicEntries.push({ displayName: `${opponentName}${suffix}`, speed: c.opponentSpeed, isPlayer: false });
       }
     }
 
-    // Opponent min and max
-    for (const comp of comparisons) {
-      if (comp.playerLabel !== 'Base') continue;
-      if (comp.opponentLabel !== 'Min Speed' && comp.opponentLabel !== 'Max Speed') continue;
-      const suffix = comp.opponentLabel === 'Max Speed' ? '+' : '=';
-      const key = `${opponentName}-${comp.opponentLabel}-${comp.opponentSpeed}`;
-      if (!simpleSeen.has(key)) {
-        simpleSeen.add(key);
-        simpleEntries.push({
-          displayName: `${opponentName}${suffix}`,
-          speed: comp.opponentSpeed,
-          isPlayer: false,
-        });
-      }
-    }
-  }
-
-  simpleEntries.sort((a, b) => b.speed - a.speed);
-
-  // --- Full ladder: all scenarios ---
-  const fullEntries = [];
-  const fullSeen = new Set();
-
-  for (const { playerName, opponentName, comparisons } of speedData) {
-    for (const { playerLabel, playerSpeed, opponentLabel, opponentSpeed } of comparisons) {
-      const pk = `${playerName}-${playerLabel}-${playerSpeed}`;
+    // Full column
+    for (const c of fullComparisons) {
+      const pk = `player-${playerName}-${c.playerLabel}-${c.playerSpeed}`;
       if (!fullSeen.has(pk)) {
         fullSeen.add(pk);
-        const suffix = playerLabel === 'Base' ? '' : ` (${playerLabel})`;
-        fullEntries.push({
-          displayName: `${playerName}${suffix}`,
-          speed: playerSpeed,
-          isPlayer: true,
-        });
+        const suffix = c.playerLabel === 'Base' ? '' : ` (${c.playerLabel})`;
+        fullEntries.push({ displayName: `${playerName}${suffix}`, speed: c.playerSpeed, isPlayer: true });
       }
-
-      const ok = `${opponentName}-${opponentLabel}-${opponentSpeed}`;
+      const ok = `opp-${opponentName}-${c.opponentLabel}-${c.opponentSpeed}`;
       if (!fullSeen.has(ok)) {
         fullSeen.add(ok);
-        const suffix = opponentLabel === 'Max Speed' ? '+' : opponentLabel === 'Min Speed' ? '-' : ` (${opponentLabel})`;
-        fullEntries.push({
-          displayName: `${opponentName}${suffix}`,
-          speed: opponentSpeed,
-          isPlayer: false,
-        });
+        const suffix = c.opponentLabel ? ` ${c.opponentLabel}` : '';
+        fullEntries.push({ displayName: `${opponentName}${suffix}`, speed: c.opponentSpeed, isPlayer: false });
       }
     }
   }
 
+  basicEntries.sort((a, b) => b.speed - a.speed);
   fullEntries.sort((a, b) => b.speed - a.speed);
 
-  wrapper.appendChild(buildLadder('Base Speeds', simpleEntries));
-  wrapper.appendChild(buildLadder('All Scenarios', fullEntries));
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;';
+  wrapper.appendChild(buildLadder('Basic', basicEntries));
+  wrapper.appendChild(buildLadder('Full Scenarios', fullEntries));
   container.appendChild(wrapper);
 }
 
@@ -84,7 +52,7 @@ function buildLadder(title, entries) {
   section.style.cssText = 'flex: 1; min-width: 280px;';
 
   const header = document.createElement('div');
-  header.style.cssText = 'color: #58a6ff; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid #30363d; padding-bottom: 6px;';
+  header.className = 'ladder-header';
   header.textContent = title;
   section.appendChild(header);
 

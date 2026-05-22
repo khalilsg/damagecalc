@@ -1,54 +1,42 @@
 export function renderDefense(defenseData, container) {
   container.innerHTML = '';
-
   for (const { playerName, matchups } of defenseData) {
-    const section = document.createElement('div');
-    section.className = 'player-section';
-
-    const header = document.createElement('div');
-    header.className = 'section-header';
-    header.textContent = `▸ ${playerName} (incoming damage)`;
-    section.appendChild(header);
-
-    const cards = document.createElement('div');
-    cards.className = 'matchup-cards';
-
+    const section = el('div', 'player-section');
+    section.appendChild(sectionHeader(`▸ ${playerName} (incoming)`));
+    const cards = el('div', 'matchup-cards');
     for (const { opponentName, scenarios } of matchups) {
       if (scenarios.length === 0) continue;
-      const card = document.createElement('div');
-      card.className = 'matchup-card';
-
-      const cardHeader = document.createElement('div');
-      cardHeader.className = 'card-header';
-      cardHeader.textContent = `${opponentName} attacking`;
-      card.appendChild(cardHeader);
-
+      const card = el('div', 'matchup-card');
+      card.appendChild(cardHeader(`${opponentName} attacking`));
       for (const { label, rows } of scenarios) {
-        if (label !== 'Base') {
-          const scenarioLabel = document.createElement('div');
-          scenarioLabel.className = 'scenario-label';
-          scenarioLabel.textContent = `My ${label}`;
-          card.appendChild(scenarioLabel);
-        }
-        for (const { formattedDesc, classification } of rows) {
-          const row = document.createElement('div');
-          row.className = `calc-row ${getKoClass(classification)}`;
-          row.textContent = formattedDesc;
+        if (label !== 'Base') card.appendChild(scenarioLabel(`My ${label}`));
+        for (const { formattedDesc, classification, isInBattle } of rows) {
+          const row = el('div', `calc-row ${koClass(classification)}${isInBattle ? ' in-battle-row' : ''}`);
+          if (isInBattle) {
+            const badge = el('span', 'in-battle-badge');
+            badge.textContent = 'IN BATTLE';
+            row.appendChild(badge);
+            row.appendChild(document.createTextNode(' ' + formattedDesc));
+          } else {
+            row.textContent = formattedDesc;
+          }
           card.appendChild(row);
         }
       }
-
       cards.appendChild(card);
     }
-
     section.appendChild(cards);
     container.appendChild(section);
   }
 }
 
-function getKoClass(classification) {
-  if (classification === 'guaranteed-ohko') return 'ko-guaranteed';
-  if (classification === 'chance-ohko') return 'ko-chance';
-  if (classification === '2hko') return 'ko-2hko';
+function el(tag, cls) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
+function sectionHeader(text) { const h = el('div', 'section-header'); h.textContent = text; return h; }
+function cardHeader(text)    { const h = el('div', 'card-header');    h.textContent = text; return h; }
+function scenarioLabel(text) { const h = el('div', 'scenario-label'); h.textContent = text; return h; }
+function koClass(c) {
+  if (c === 'guaranteed-ohko') return 'ko-guaranteed';
+  if (c === 'chance-ohko')     return 'ko-chance';
+  if (c === '2hko')            return 'ko-2hko';
   return '';
 }
