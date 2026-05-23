@@ -10,7 +10,7 @@
  */
 
 import { Command } from 'commander';
-import { fetchChaosData, parseOpponents, getMonEntry } from './chaos.js';
+import { fetchChaosData, parseOpponents, getSpecificOpponents, getMonEntry } from './chaos.js';
 import { resolveSpecies, isMoveUsable } from './calc.js';
 import { runOffensiveCheck, runDefensiveCheck, runSpeedAudit } from './simulate.js';
 import { renderOffenseTable, renderDefenseTable, renderSpeedTable, renderHeader } from './render.js';
@@ -29,6 +29,7 @@ program
   .option('--item <item>',                   'Held item')
   .option('--moves <m1,m2,...>',             'Comma-separated moves (defaults to meta top moves)')
   .option('--top <n>',                       'Number of meta opponents to test against',  '20')
+  .option('--opponents <p1,p2,...>',         'Specific Pokémon to check against (overrides --top)')
   .option('--test-items <i1,i2,...>',        'Test multiple items; overrides --item')
   .option('--boosts <+1 SpA,-1 Spe,...>',   'Stat stage boosts (e.g. "+2 SpA")')
   .option('--optimize',                      'Run EV optimization mode')
@@ -85,7 +86,19 @@ function die(msg) { console.error(`\nError: ${msg}\n`); process.exit(1); }
     die(e.message);
   }
 
-  const opponents = parseOpponents(chaosData, topN);
+  let opponents;
+  if (opts.opponents) {
+    // Resolve each name; bail on any that @smogon/calc doesn't recognise
+    const rawNames = opts.opponents.split(',').map(s => s.trim()).filter(Boolean);
+    const resolvedOpponents = rawNames.map(n => {
+      const r = resolveSpecies(n);
+      if (!r) die(`Opponent "${n}" not found. Check spelling.`);
+      return r;
+    });
+    opponents = getSpecificOpponents(chaosData, resolvedOpponents);
+  } else {
+    opponents = parseOpponents(chaosData, topN);
+  }
   if (opponents.length === 0) die('No opponent data found in the chaos file. Check --prefix and --month.');
 
   // Resolve user moves: explicit flag → chaos data for this mon → error
@@ -116,8 +129,11 @@ function die(msg) { console.error(`\nError: ${msg}\n`); process.exit(1); }
 
   // Print banner
   const evsStr = Object.entries(evs).filter(([,v]) => v > 0).map(([k,v]) => `${v} ${k.toUpperCase()}`).join(' / ') || 'No EVs';
-  const boostStr = Object.keys(boosts).length ? `  Boosts: ${Object.entries(boosts).map(([k,v]) => `${v>0?'+':''}${v} ${k}`).join(', ')}` : '';
+  const boostStr = Object.keys(boosts).length ? `\n  Boosts  : ${Object.entries(boosts).map(([k,v]) => `${v>0?'+':''}${v} ${k}`).join(', ')}` : '';
   const movesStr = moves.join(', ');
+  const threatsStr = opts.opponents
+    ? opponents.map(o => o.name).join(', ')
+    : `Top ${topN}`;
 
   console.log(`
 ╔══════════════════════════════════════════════════════╗
@@ -128,7 +144,7 @@ function die(msg) { console.error(`\nError: ${msg}\n`); process.exit(1); }
   EVs     : ${evsStr}${boostStr}
   Moves   : ${movesStr}
   Format  : ${opts.prefix} (${opts.month})
-  Threats : Top ${topN}
+  Threats : ${threatsStr}
 `);
 
   // Build base user spec (item may be overridden in item loop below)

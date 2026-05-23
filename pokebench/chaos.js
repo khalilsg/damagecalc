@@ -63,6 +63,35 @@ export function parseOpponents(chaosData, topN) {
 }
 
 /**
+ * Build an opponent list from an explicit set of resolved species names.
+ * Pulls moves, spreads, and items from the chaos data for each.
+ * Names not found in the chaos data are included with empty meta and a warning.
+ *
+ * @param {object}   chaosData      Raw chaos JSON
+ * @param {string[]} resolvedNames  Species names (already resolved via resolveSpecies)
+ * @returns {Array}  Same shape as parseOpponents()
+ */
+export function getSpecificOpponents(chaosData, resolvedNames) {
+  return resolvedNames.map(name => {
+    const entry = getMonEntry(chaosData, name);
+    if (!entry) {
+      process.stderr.write(`Warning: "${name}" not found in chaos data — no meta spreads or moves available.\n`);
+      return { name, usagePct: 0, moves: [], items: [], spreads: [] };
+    }
+    const spreads = sortDesc(entry.Spreads ?? {})
+      .map(([key, pct]) => { const s = parseSpread(key); return s ? { ...s, pct } : null; })
+      .filter(Boolean);
+    return {
+      name,
+      usagePct: entry.usage ?? 0,
+      moves:   sortDesc(entry.Moves ?? {}).map(([n, pct]) => ({ name: n, pct })),
+      items:   sortDesc(entry.Items ?? {}).map(([n, pct]) => ({ name: n, pct })),
+      spreads,
+    };
+  });
+}
+
+/**
  * Look up a specific Pokémon's chaos entry by resolved species name.
  * Returns null if not present in the data.
  */

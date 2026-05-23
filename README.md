@@ -182,6 +182,7 @@ node pokebench/index.js \
 | `--item` | Held item | None |
 | `--moves` | Comma-separated moves (defaults to the Pokémon's top meta moves) | Auto |
 | `--top` | Number of opponents to test against | `20` |
+| `--opponents` | Comma-separated list of specific Pokémon to test against; overrides `--top` | Off |
 | `--test-items` | Comma-separated list of items to compare; overrides `--item` | Off |
 | `--boosts` | Stat stage boosts, e.g. `"+2 SpA,-1 Spe"` | None |
 | `--optimize` | Run EV optimization mode | Off |
