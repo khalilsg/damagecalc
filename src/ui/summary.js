@@ -106,7 +106,7 @@ function buildThreatCard(entry) {
   card.appendChild(covHead);
 
   const answers = el('div', 'tm-answers');
-  for (const { mon, move, pct } of entry.answers) {
+  for (const { mon, move, pct, minPct } of entry.answers) {
     const row = el('div', 'tm-answer-row');
 
     const monSpan = el('span', 'tm-answer-mon');
