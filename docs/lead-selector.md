@@ -11,27 +11,42 @@ Given your 6 Pokémon and an opponent's 6 Pokémon (entered by species name at t
 | Input | Source | Notes |
 |---|---|---|
 | Your team | Existing team textarea | Same Showdown format already used by K Calc |
-| Opponent's 6 species | New species picker (reuse existing defender search UI) | Names only — sets inferred from chaos data |
-| Format / month | Dropdown or auto from last PokéBench run | Determines which chaos file to load |
+| Opponent's 6 species | Self-contained species picker inside the Lead Selector tab | Names only — sets inferred from chaos data |
+| Format | Dropdown in the Lead Selector tab | Selects which bundled chaos file to load |
 
 ---
 
 ## Data Sources
 
 ### Your team
-Already parsed by `src/parser.js` and used in all existing calc tabs.
+Parsed on demand from the team textarea via `parseSets()`. No prior analysis run required — the Lead Selector reads the textarea directly when "Find Best Leads" is clicked.
 
 ### Opponent sets
 Pulled from Smogon chaos data (same JSON used by PokéBench CLI).
 
-**CORS note:** Smogon's stats server returns no `Access-Control-Allow-Origin` header, so direct browser `fetch()` is blocked. Solution: bundle the chaos JSON for the active format as a static asset, updated monthly via a local script. See [Bundling](#chaos-data-bundling) below.
+**CORS:** Confirmed — Smogon's stats server returns no `Access-Control-Allow-Origin` header, so direct browser `fetch()` is blocked. Solution: bundle trimmed chaos JSON as static assets served from the same origin (GitHub Pages), updated monthly via a local script.
 
 For each opponent species, we use:
-- **Top 3 spreads** (nature + EVs by usage %) as the representative defensive profile
-- **Top 5 moves** as their offensive threat set
-- **Top 3 items** to determine damage modifiers
+- **Top 8 moves** by usage % — offensive threat assessment and leadability signals
+- **Top 5 spreads** (nature + EVs) — representative defensive profile
+- **Top 5 items** — damage modifiers
 
-This is the same approach PokéBench uses for its offensive/defensive checks.
+---
+
+## Format Rule: Mega Constraint
+
+In the Champions format, **at most 1 Mega Pokémon may be brought per match** (a team of 6 may have multiple, but only 1 can be in the bring of 4).
+
+Detection: a species is considered Mega if its resolved name contains `-Mega` (e.g. `Blastoise-Mega`, `Alakazam-Mega`).
+
+This constraint is enforced in two places:
+
+1. **Lead pair filtering** — lead pairs where both mons are Mega are removed entirely from results. They can never form a valid bring.
+
+2. **Back pair filtering** — when choosing the back pair:
+   - If 1 lead is Mega → back pair candidates are filtered to 0 Megas
+   - If 0 leads are Mega → back pair may contain at most 1 Mega
+   - If no valid back pair exists after filtering (e.g. all remaining mons are Mega) → `backPair: null`
 
 ---
 
@@ -39,48 +54,50 @@ This is the same approach PokéBench uses for its offensive/defensive checks.
 
 ### Step 1 — Build the raw matchup matrix
 
-Run the existing calc engine for every (your mon, their mon) pair, both directions, using each opponent's top spread as a representative set. This produces:
+For every (your mon, their mon) pair, compute both directions using `@smogon/calc` directly:
 
 ```
-matrix[yourMon][theirMon] = {
-  bestDamageOut: number,     // max % damage you deal (best move, worst-case defense)
-  bestDamageIn:  number,     // max % damage they deal (best move, typical spread)
-  youOutspeed:   boolean,
-  classification: 'OHKO' | '2HKO' | 'chunk' | 'tickle'
+matchups[yourMonIdx][oppIdx] = {
+  damageOut:   number,   // max % damage you deal (best move, max roll)
+  damageIn:    number,   // max % damage they deal (best move, max roll)
+  youOutspeed: boolean
 }
 ```
 
-This reuses `calcEngine.js` logic — no new calc code needed.
+Multi-hit moves (Dragon Darts, Population Bomb) are handled by summing max damage across hits. Status/support moves are skipped via `SKIP_MOVES`.
+
+Opponent Pokémon are built from their most-used chaos spread + item. Your Pokémon are built from the parsed team set, with Champions EV scaling applied (32 EVs → 252 standard).
 
 ### Step 2 — Estimate leadability weight per opponent mon
 
-Not all 6 opponent Pokémon are equally likely to appear turn 1. Score each opponent mon by how "leadable" it appears, based on their top moves from chaos data:
+Not all 6 opponent Pokémon are equally likely to appear turn 1. Each opponent is scored by the highest-priority lead signal in their top moves:
 
-| Signal | Weight multiplier |
+| Signal move | Weight |
 |---|---|
-| Has Fake Out | ×2.0 |
-| Has Tailwind or Trick Room | ×1.5 |
-| Has Parting Shot or U-turn | ×1.3 |
-| Has Follow Me or Rage Powder | ×1.3 |
-| No setup/support moves (pure attacker) | ×1.0 |
-| Primarily a back-line threat (e.g. low Speed, no priority) | ×0.7 |
+| Fake Out | ×2.0 |
+| Tailwind, Trick Room | ×1.5 |
+| Follow Me, Rage Powder, Parting Shot | ×1.3 |
+| U-turn, Encore | ×1.2 |
+| (no signal) | ×1.0 |
 
-Weights are normalized so they sum to 1.0 across the 6 Pokémon. These serve as a probability distribution over the opponent's likely leads.
+Weights are normalized to sum to 1.0 across the opponent's 6 mons. These serve as a probability distribution over likely leads.
 
-> **Revision note:** These multipliers are heuristic. Adjust based on real-world accuracy after testing.
+> **Note:** The ×0.7 "back-line threat" signal from the original design was dropped — it required move heuristics that weren't reliable. The minimum weight is 1.0 (uniform).
 
-### Step 3 — Score every lead pair from your team
+> **Revision note:** Multipliers are heuristic. Adjust based on real-world accuracy after testing.
 
-C(6,2) = 15 possible pairs. For each pair (A, B):
+### Step 3 — Score every valid lead pair
+
+Up to C(6,2) = 15 possible pairs, minus any filtered by the Mega constraint. For each pair (A, B):
 
 #### 3a. Offensive threat score
 ```
 For each opponent mon O_i:
   threat = max(damageOut(A, O_i), damageOut(B, O_i))
-  if threat >= 100%: points = 3   // OHKO from at least one lead
-  if threat >= 50%:  points = 1.5 // likely 2HKO
-  if threat >= 30%:  points = 0.5 // meaningful chunk
-  else:              points = 0
+  points = 3    if threat >= 100%   // OHKO from at least one lead
+         = 1.5  if threat >= 50%    // strong chunk / likely 2HKO
+         = 0.5  if threat >= 30%    // meaningful damage
+         = 0    otherwise
 
 offensiveScore = Σ (points × leadWeight(O_i))
 ```
@@ -88,115 +105,166 @@ offensiveScore = Σ (points × leadWeight(O_i))
 #### 3b. Defensive durability score
 ```
 For each opponent mon O_i:
-  inA = damageIn(O_i, A)   // damage O_i deals to A
-  inB = damageIn(O_i, B)   // damage O_i deals to B
+  inA = damageIn(O_i, A)
+  inB = damageIn(O_i, B)
 
-  if inA < 100 AND inB < 100: points = 2   // both survive
-  if inA < 100 OR  inB < 100: points = 1   // one survives
-  if inA >= 100 AND inB >= 100: points = -2 // hard counter — both faint
+  points = 2   if inA < 100 AND inB < 100   // both survive
+         = 1   if inA < 100 OR  inB < 100   // one survives
+         = -2  if inA >= 100 AND inB >= 100  // hard counter — both faint
 
 defenseScore = Σ (points × leadWeight(O_i))
 ```
 
-The -2 penalty for a hard counter is intentionally disproportionate. A lead that gets completely shut down by a single likely opponent mon is much worse than a lead that merely loses the damage race.
+The -2 hard counter penalty is intentionally disproportionate. A lead that gets completely shut down by a single likely opponent is much worse than one that merely loses the damage race.
 
 #### 3c. Speed score
 ```
-speedScore = count of opponent mons that A or B outspeeds
-             (weighted by leadWeight)
+speedScore = Σ leadWeight(O_i)  for each O_i where A or B outspeeds O_i
 ```
-Normalized to 0–1 range across all 15 pairs.
+(weighted fraction of opponents outrun; range 0–1)
 
-#### 3d. Coverage penalty
+#### 3d. Hard counter penalty
 ```
-sharedWeaknesses = type weaknesses common to both A and B
-coveragePenalty = count of opponent mons that hit a shared weakness super-effectively
+hardCounterPenalty = (count of opponents that OHKO both leads) / 6 × 100
 ```
+
+> **Implementation note:** The original design called for a type-chart-based "coverage penalty" (shared type weaknesses). This was replaced with the damage-based hard counter penalty — it's equivalent in practice and requires no type chart lookup.
 
 #### 3e. Final score
 ```
-score(A, B) = 0.40 × offensiveScore
-            + 0.35 × defenseScore
-            + 0.15 × speedScore
-            - 0.10 × coveragePenalty
+score(A, B) = 0.40 × offenseNorm
+            + 0.35 × defenseNorm
+            + 0.15 × speedNorm
+            - 0.10 × hardCounterPenalty
 ```
 
-> **Weights are v1 defaults.** All four weights sum to 1.0 (ignoring the penalty sign).
-> Expected revision: offensive weight may need to drop slightly once tested on real team previews.
+Where each component is normalized to 0–100:
+- `offenseNorm  = offensiveScore / 3.0 × 100`
+- `defenseNorm  = (defenseScore + 2.0) / 4.0 × 100`  (raw range [−2, +2])
+- `speedNorm    = speedScore × 100`
+
+> **Weights:** The four absolute values sum to 1.0 (0.40 + 0.35 + 0.15 + 0.10 = 1.0). Expected revision: offensive weight may need to drop slightly once tested on real team previews.
 
 ### Step 4 — Choose the back pair
 
-For the top-ranked lead pair (A, B), the best back pair from the remaining 4 is the pair that scores highest against the opponent mons that (A, B) performed worst against. Specifically:
+For each lead pair, select the back pair from the remaining Pokémon that best covers uncovered threats:
 
-1. Identify the 2 opponent Pokémon where (A, B) scored lowest
-2. From the remaining 4 of your team, score all C(4,2) = 6 back pairs against those threats
-3. Return the highest-scoring back pair as the recommended bring
+1. Identify "uncovered" opponents: those where neither lead deals ≥50% damage
+2. From remaining mons (respecting Mega constraint), score all valid back pair combinations:
+   - Reward threatening each uncovered mon (`offensePoints()`)
+   - Bonus for surviving the uncovered mon's best move
+3. Return the highest-scoring valid back pair with a `covers` list
+
+Returns `null` when no valid back pair exists (Mega constraint makes all remaining mons ineligible).
 
 ---
 
 ## Output
 
-Display top 3 lead pair recommendations, sorted by score. For each:
+Top 5 lead pair results shown as cards, sorted by score. For each:
 
 ```
-1. Blastoise-Mega + Incineroar                    Score: 82 / 100
-   Offense   ████████░░  Threatens 5 of 6
-   Defense   ███████░░░  Both survive 4 of 6
-   Speed     █████░░░░░  Faster than 3 of 6
-   Coverage  ✓ No shared weaknesses
+[1]  Blastoise-Mega + Incineroar                          [82]
+     Offense  ████████████████████░░░░  75
+     Defense  ██████████████░░░░░░░░░░  60
+     Speed    ████████░░░░░░░░░░░░░░░░  45
 
-   Recommended bring: + Rillaboom, Alakazam-Mega
-   (covers Gholdengo and Flutter Mane)
-
-   Hard counters: none
-   Warnings: Urshifu-Rapid-Strike threatens both leads
+     Threatens   Gholdengo, Rillaboom, Incineroar
+     ⚠ Hard counter  Kyogre
+     Bring       Garchomp + Togekiss  (covers Flutter Mane, Urshifu)
 ```
+
+Score chip and bar colors: green ≥65, amber 40–64, red <40.
 
 ---
 
 ## Chaos Data Bundling
 
-Since browser `fetch()` to Smogon's stats server is blocked by missing CORS headers, chaos data is bundled as a static asset.
+### Why bundled
+Smogon's stats server returns no CORS headers → browser `fetch()` blocked. Files are bundled as static assets in `public/data/chaos/` and served from the same origin (GitHub Pages). No CORS issue.
 
 ### File location
 ```
-src/data/chaos/
-  gen9championsvgc2026regmabo3.json   ← full chaos JSON, committed to repo
-  gen9championsbssregma.json
-  ...
+public/data/chaos/
+  gen9championsvgc2026regmabo3.json   ← trimmed, ~103 KB
+  gen9championsvgc2026regma.json      ← trimmed, ~110 KB
+  gen9championsbssregma.json          ← trimmed, ~106 KB
 ```
+
+Vite copies `public/` to `dist/` unchanged on build.
+
+### Trimming
+The raw chaos JSON is ~4.5 MB per format. The update script trims each species entry to:
+- Top 8 moves, top 5 spreads, top 5 items, usage %
+
+Result: ~98% size reduction (4.5 MB → ~103 KB).
 
 ### Update script
 ```
-node scripts/update-chaos.js --prefix gen9championsvgc2026regmabo3 --month 2026-04
+npm run update-chaos -- --month YYYY-MM
+# or for a specific format:
+npm run update-chaos -- --month 2026-04 --prefix gen9championsvgc2026regmabo3
 ```
 
-Fetches from Smogon via Node (bypasses CORS), writes to `src/data/chaos/`. Run locally once per month when new stats drop. Commit the updated JSON.
+Run locally once per month when new Smogon stats drop. Commit the updated files in `public/data/chaos/`.
 
-### Import in app
+### Fetching in the app
 ```js
-import chaosData from '../data/chaos/gen9championsvgc2026regmabo3.json' assert { type: 'json' };
+// import.meta.env.BASE_URL resolves to '/' in dev, '/damagecalc/' on GitHub Pages
+const res = await fetch(`${import.meta.env.BASE_URL}data/chaos/${prefix}.json`);
 ```
 
-Or loaded dynamically based on which format the user selects.
+> **Gotcha:** Using an absolute path (`/data/chaos/...`) ignores the Vite `base` config and breaks on GitHub Pages. Always use `import.meta.env.BASE_URL` as the prefix.
+
+---
+
+## File Structure
+
+```
+src/leadSelector/
+  chaos.js      — loadChaosData(prefix), getOpponentRep(), parseSpread()
+  score.js      — scoreLeadPairs(), isMega(), bestDamage(), offensePoints(),
+                  defensePoints(), leadWeight(), SKIP_MOVES, LEAD_SIGNAL_WEIGHTS,
+                  SCORE_WEIGHTS
+
+src/ui/
+  leadSelector.js — initLeadSelectorTab(container, getYourSets)
+                    Self-contained: owns opponent search, format selector,
+                    result cards. Does NOT reuse the main defender-search.
+
+public/data/chaos/
+  *.json        — trimmed chaos data, committed to repo
+
+scripts/
+  update-chaos.js — fetch + trim + write chaos files
+
+tests/
+  lead-selector.test.js — 91 tests covering scoring primitives,
+                           chaos parsing, integration, Mega constraint
+```
 
 ---
 
 ## UI
 
-The lead selector lives in a new tab: **Lead Selector**, added between Summary and My Offense.
+The Lead Selector is a self-contained tab between Summary and My Offense. It owns its own opponent search (separate from the main defender-search — same UX, independent state).
 
-### Inputs section (top of tab)
-- Opponent species picker: reuse the existing defender-search + tag UI (already built), capped at 6 species
-- Format selector: dropdown listing available bundled chaos files
-- "Find Best Leads" button
+### Inputs
+- **Format dropdown** — VGC 2026 Reg MA Bo3, VGC 2026 Reg MA, BSS Reg MA
+- **Opponent species search** — same typeahead UX as defender search; capped at 6; tags with × to remove
+- **Find Best Leads button** — reads the team textarea directly (no prior analysis needed)
 
-### Results section
-- Top 3 lead pair cards (see Output format above)
-- Each card expandable to show per-matchup breakdown
+### Results
+- Up to 5 lead pair cards
+- Score chip color-coded: green ≥65, amber 40–64, red <40
+- Offense/Defense/Speed bars (0–100)
+- Threats list (opponents at least one lead deals ≥50% to)
+- Hard counter warning (opponent OHKOs both leads)
+- Back pair recommendation with covered threats listed
+- `null` back pair shown as no recommendation when Mega constraint makes any bring invalid
 
 ### Relationship to Battle Tracker
-The lead selector is pre-game only — it doesn't interact with the Battle Tracker. Once you've chosen leads and the game starts, you use the existing tabs as normal.
+Pre-game only. The Lead Selector doesn't interact with the Battle Tracker. Once leads are chosen and the game starts, use the existing tabs as normal.
 
 ---
 
@@ -210,26 +278,30 @@ The lead selector is pre-game only — it doesn't interact with the Battle Track
 
 - **Single-turn analysis only.** Scores are based on turn-1 damage/speed. Doesn't model turn-2 (e.g. a mon that's weak turn 1 but wins after a stat boost). Fix: future version could weight 2HKO scenarios for mons with setup moves.
 
+- **Single representative spread per opponent.** Only the most-used chaos spread is used for each opponent mon. A mon with a bimodal spread distribution (e.g. both TR and fast variants common) is represented by only one.
+
 ---
 
 ## Implementation Phases
 
-### Phase 1 — Data layer
-- [ ] `scripts/update-chaos.js` — fetch and write chaos JSON locally
-- [ ] Bundle initial chaos JSON for active format(s)
-- [ ] `src/leadSelector/chaos.js` — load bundled chaos, parse opponent sets (reuse PokéBench chaos.js logic)
+### Phase 1 — Data layer ✅
+- [x] `scripts/update-chaos.js` — fetch, trim, and write chaos JSON locally
+- [x] Bundle initial chaos JSON for 3 Champions formats in `public/data/chaos/`
+- [x] `src/leadSelector/chaos.js` — `loadChaosData()`, `getOpponentRep()`, `parseSpread()`
 
-### Phase 2 — Algorithm
-- [ ] `src/leadSelector/score.js` — Steps 2–4: leadability weights, pair scoring, back pair selection
-- [ ] Unit tests for scoring logic
+### Phase 2 — Algorithm ✅
+- [x] `src/leadSelector/score.js` — leadability weights, pair scoring, back pair selection
+- [x] Mega constraint: filter invalid lead pairs + constrain back pair candidates
+- [x] Unit + integration tests (91 tests total)
 
-### Phase 3 — UI
-- [ ] New "Lead Selector" tab in `index.html`
-- [ ] Opponent species picker (reuse defender-search component)
-- [ ] Results cards with score breakdown
-- [ ] Wire up to calc engine and score.js
+### Phase 3 — UI ✅
+- [x] New "Lead Selector" tab in `index.html`
+- [x] Self-contained opponent species picker with typeahead and tags
+- [x] Score cards with bar charts, threat lists, hard counter warnings, back pair
+- [x] Wired to `getYourSets()` callback — reads team textarea on demand
 
 ### Phase 4 — Tuning
 - [ ] Test against real team previews from recorded matches
 - [ ] Adjust scoring weights based on accuracy
 - [ ] Add role tags (`[TR]`, `[TW]`) to team format if needed
+- [ ] Consider multi-spread analysis (test top 3 spreads per opponent, not just top 1)
