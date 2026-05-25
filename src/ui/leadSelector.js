@@ -13,7 +13,7 @@
 
 import { allSpecies, resolveSpeciesName } from '../calcEngine.js';
 import { loadChaosData, KNOWN_FORMATS }   from '../leadSelector/chaos.js';
-import { scoreLeadPairs, buildThreatMatrix, SKIP_MOVES } from '../leadSelector/score.js';
+import { scoreLeadPairs, buildThreatMatrix } from '../leadSelector/score.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ function scoreBar(label, value) {
  * @param {HTMLElement} container   The #tab-lead panel element
  * @param {function}    getYourSets Returns parsed player sets on demand
  */
-export function initLeadSelectorTab(container, getYourSets) {
+export function initLeadSelectorTab(container, getYourSets, onThreatMatrix = null) {
   container.innerHTML = '';
 
   // ── Static structure ────────────────────────────────────────────────────────
@@ -233,8 +233,10 @@ export function initLeadSelectorTab(container, getYourSets) {
     runBtn.textContent = 'FIND BEST LEADS';
     runBtn.disabled    = false;
 
+    // Push threat matrix to the Summary tab via callback
+    onThreatMatrix?.(threatMatrix);
+
     renderResults(resultsEl, results.slice(0, 5), yourSets.length);
-    renderThreatMatrix(resultsEl, threatMatrix);
   });
 }
 
@@ -258,115 +260,6 @@ function renderResults(container, results, teamSize) {
     const card = buildCard(result, i + 1, teamSize);
     grid.append(card);
   });
-}
-
-// ── Threat matrix rendering ───────────────────────────────────────────────────
-
-const EV_LABELS = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
-
-function formatEVs(evs) {
-  if (!evs) return '';
-  return Object.entries(evs)
-    .filter(([, v]) => v > 0)
-    .map(([k, v]) => `${v} ${EV_LABELS[k] ?? k}`)
-    .join(' / ');
-}
-
-function pctColor(pct) {
-  if (pct >= 100) return '#2a7a2a';
-  if (pct >= 50)  return '#b07000';
-  return '#888';
-}
-
-function renderThreatMatrix(container, threatMatrix) {
-  const wrap = el('div', 'tm-wrap');
-  wrap.append(el('div', 'tm-heading', 'Opponent Sets & Threat Analysis'));
-
-  const grid = el('div', 'tm-grid');
-  for (const entry of threatMatrix) {
-    grid.append(buildThreatCard(entry));
-  }
-  wrap.append(grid);
-  container.append(wrap);
-}
-
-function buildThreatCard(entry) {
-  const card = el('div', 'tm-card');
-
-  // ── Header: species name + item ────────────────────────────────────────────
-  const header = el('div', 'tm-card-header');
-  header.append(el('span', 'tm-opp-name', entry.name));
-  if (entry.item) header.append(el('span', 'tm-opp-item', entry.item));
-  card.append(header);
-
-  if (!entry.inChaos) {
-    card.append(el('div', 'tm-no-data', 'No chaos data — set unknown'));
-    return card;
-  }
-
-  // ── Set info: nature + EVs ─────────────────────────────────────────────────
-  const evStr  = formatEVs(entry.spread.evs);
-  const setStr = entry.spread.nature + (evStr ? ` · ${evStr}` : '');
-  card.append(el('div', 'tm-set-info', setStr));
-
-  // ── All moves (chip row) ───────────────────────────────────────────────────
-  if (entry.moves.length > 0) {
-    const movesRow = el('div', 'tm-moves-row');
-    for (const move of entry.moves) {
-      const cls = 'tm-move-chip' + (SKIP_MOVES.has(move) ? ' tm-skip' : '');
-      movesRow.append(el('span', cls, move));
-    }
-    card.append(movesRow);
-  }
-
-  // ── Their threats ──────────────────────────────────────────────────────────
-  card.append(el('div', 'tm-section-head', 'Their Threats'));
-
-  if (entry.threatsOut.length === 0) {
-    card.append(el('div', 'tm-no-threats', 'No significant threats to your team'));
-  } else {
-    const threatsDiv = el('div', 'tm-threats');
-    for (const { move, targets } of entry.threatsOut) {
-      const row = el('div', 'tm-threat-row');
-      row.append(el('span', 'tm-threat-move', move));
-      const targetsSpan = el('span', 'tm-targets');
-      for (const { mon, pct } of targets) {
-        const cls = pct >= 100 ? 'tm-target tm-ohko' : pct >= 50 ? 'tm-target tm-warn' : 'tm-target tm-chip';
-        targetsSpan.append(el('span', cls, `${mon} ${Math.round(pct)}%`));
-      }
-      row.append(targetsSpan);
-      threatsDiv.append(row);
-    }
-    card.append(threatsDiv);
-  }
-
-  // ── Your coverage ──────────────────────────────────────────────────────────
-  card.append(el('div', 'tm-section-head', 'Your Coverage'));
-
-  const answersDiv = el('div', 'tm-answers');
-  for (const { mon, move, pct } of entry.answers) {
-    const row = el('div', 'tm-answer-row');
-    row.append(el('span', 'tm-answer-mon', mon));
-
-    if (!move) {
-      row.append(el('span', 'tm-answer-move tm-no-move', '—'));
-      const track = el('div', 'tm-answer-track');
-      track.append(el('div', 'tm-answer-fill'));
-      row.append(track, el('span', 'tm-answer-pct', '—'));
-    } else {
-      row.append(el('span', 'tm-answer-move', move));
-      const track = el('div', 'tm-answer-track');
-      const fill  = el('div', 'tm-answer-fill');
-      fill.style.width           = `${Math.min(100, pct)}%`;
-      fill.style.backgroundColor = pctColor(pct);
-      track.append(fill);
-      row.append(track, el('span', 'tm-answer-pct', `${Math.round(pct)}%`));
-    }
-    answersDiv.append(row);
-  }
-  card.append(answersDiv);
-
-  return card;
 }
 
 // ── Lead pair card rendering ──────────────────────────────────────────────────

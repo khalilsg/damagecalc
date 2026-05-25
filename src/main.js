@@ -16,6 +16,7 @@ import { initLeadSelectorTab } from './ui/leadSelector.js';
 preloadStats();
 
 let analysisData      = null;
+let threatMatrix      = null;   // from Lead Selector — shown at top of Summary
 let currentPlayerSets = null;
 let currentOpponents  = [];  // resolved names
 let unsubscribe       = null;
@@ -83,7 +84,7 @@ async function renderReactive(state) {
 
   // Filter to active (non-KO'd) Pokémon before rendering all tabs
   const filtered = filterByActive(analysisData, state);
-  renderSummary(filtered, document.getElementById('tab-summary'));
+  renderSummary(filtered, document.getElementById('tab-summary'), threatMatrix);
   renderOffense(filtered.offense, filtered.offenseExpanded, document.getElementById('tab-offense'), state);
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
   renderMatchupLookup(filtered, document.getElementById('tab-matchup'), state);
@@ -232,6 +233,11 @@ initLeadSelectorTab(
     const text = teamInput.value.trim();
     if (!text) throw new Error('Paste your team in the team input above.');
     return parseSets(text);
+  },
+  (matrix) => {
+    threatMatrix = matrix;
+    const filtered = analysisData ? filterByActive(analysisData, getState()) : null;
+    renderSummary(filtered, document.getElementById('tab-summary'), threatMatrix);
   }
 );
 
