@@ -39,6 +39,12 @@ export const LEAD_SIGNAL_WEIGHTS = {
   'Encore':       1.2,
 };
 
+// Champions format rule: only 1 Mega Pokémon may be brought per match.
+// Detected by the "-Mega" suffix in the resolved species name.
+export function isMega(resolvedName) {
+  return resolvedName.includes('-Mega');
+}
+
 // Scoring weights (must sum to 1.0, ignoring the penalty sign)
 export const SCORE_WEIGHTS = {
   offense:      0.40,
@@ -271,10 +277,15 @@ export function scoreLeadPairs(yourSets, opponentSpecies, chaosData) {
     };
   });
 
-  results.sort((a, b) => b.score - a.score);
+  // ── Enforce Mega constraint ──────────────────────────────────────────────────
+  // A lead pair where both mons are Mega is an invalid bring (can never field
+  // them both since you can only bring 1 Mega total). Remove these entirely.
+  const validResults = results.filter(r => !(isMega(r.monA) && isMega(r.monB)));
+
+  validResults.sort((a, b) => b.score - a.score);
 
   // ── Attach back pair recommendation to each result ───────────────────────────
-  return results.map(result => ({
+  return validResults.map(result => ({
     ...result,
     backPair: recommendBackPair(result, yourMons, matchups, opponentReps),
   }));
@@ -293,17 +304,30 @@ function recommendBackPair(leadResult, yourMons, matchups, opponentReps) {
   // Not enough back mons to form a pair
   if (backIdxs.length < 2) return null;
 
+  // Champions rule: at most 1 Mega across the full bring of 4.
+  // If a lead is already Mega, no Megas allowed in the back pair.
+  const megasInLead    = [_idxA, _idxB].filter(i => isMega(yourMons[i].resolvedName)).length;
+  const megasAllowed   = 1 - megasInLead;  // 0 or 1
+
   // Identify uncovered threats: opponents where neither lead deals ≥50%
   const uncoveredIdxs = opponentReps
     .map((_, o) => o)
     .filter(o => Math.max(matchups[_idxA][o].damageOut, matchups[_idxB][o].damageOut) < 50);
 
-  // Score back pairs by coverage of uncovered threats
-  const backPairsIdxs = pairs(backIdxs);
-  let bestPair  = backPairsIdxs[0];
+  // Only consider back pairs that satisfy the Mega constraint
+  const backPairsIdxs = pairs(backIdxs).filter(([iA, iB]) => {
+    const megaCount = [iA, iB].filter(i => isMega(yourMons[i].resolvedName)).length;
+    return megaCount <= megasAllowed;
+  });
+
+  // If no valid back pair exists (e.g. all remaining mons are Mega but none allowed),
+  // return null — there's genuinely no legal bring for this lead pair.
+  if (backPairsIdxs.length === 0) return null;
+  const candidatePairs = backPairsIdxs;
+  let bestPair  = candidatePairs[0];
   let bestScore = -Infinity;
 
-  for (const [iA, iB] of backPairsIdxs) {
+  for (const [iA, iB] of candidatePairs) {
     let score = 0;
     for (const o of uncoveredIdxs) {
       // Reward threatening the uncovered mon

@@ -21,6 +21,7 @@ import {
   leadWeight,
   bestDamage,
   scoreLeadPairs,
+  isMega,
   SKIP_MOVES,
   LEAD_SIGNAL_WEIGHTS,
   SCORE_WEIGHTS,
@@ -231,14 +232,15 @@ describe('bestDamage', () => {
 // ── 5. scoreLeadPairs — integration ─────────────────────────────────────────
 
 describe('scoreLeadPairs', () => {
-  it('returns 15 results for a 6-mon team', () => {
+  it('returns 15 results for a 6-mon team with at most 1 Mega', () => {
+    // Only 1 Mega on the team — no pairs get filtered, so C(6,2) = 15
     const yourSets = [
       mockSet('Blastoise-Mega',  { nature: 'Modest',  evs: { spa: 32, spe: 32 }, moves: ['Water Spout', 'Dark Pulse', 'Ice Beam', 'Protect'] }),
       mockSet('Rillaboom',       { nature: 'Adamant', evs: { atk: 32, spe: 32 }, moves: ['Grassy Glide', 'Wood Hammer', 'U-turn', 'Protect'] }),
       mockSet('Incineroar',      { nature: 'Adamant', evs: { atk: 32, hp: 4 },   moves: ['Fake Out', 'Flare Blitz', 'Darkest Lariat', 'Parting Shot'] }),
-      mockSet('Alakazam-Mega',   { nature: 'Timid',   evs: { spa: 32, spe: 32 }, moves: ['Psychic', 'Focus Blast', 'Dazzling Gleam', 'Protect'] }),
-      mockSet('Garchomp',        { nature: 'Jolly',   evs: { atk: 32, spe: 32 }, moves: ['Earthquake', 'Dragon Claw', 'Rock Slide', 'Protect'] }),
       mockSet('Togekiss',        { nature: 'Timid',   evs: { spa: 32, spe: 32 }, moves: ['Dazzling Gleam', 'Air Slash', 'Follow Me', 'Protect'] }),
+      mockSet('Garchomp',        { nature: 'Jolly',   evs: { atk: 32, spe: 32 }, moves: ['Earthquake', 'Dragon Claw', 'Rock Slide', 'Protect'] }),
+      mockSet('Dragapult',       { nature: 'Timid',   evs: { spa: 32, spe: 32 }, moves: ['Dragon Darts', 'Shadow Ball', 'Thunderbolt', 'Protect'] }),
     ];
 
     const chaos = mockChaosData({
@@ -393,7 +395,110 @@ describe('scoreLeadPairs', () => {
   });
 });
 
-// ── 6. getOpponentRep ────────────────────────────────────────────────────────
+// ── 6. isMega + Mega constraint ──────────────────────────────────────────────
+
+describe('isMega', () => {
+  it('returns true for Mega species', () => {
+    assert.ok(isMega('Blastoise-Mega'));
+    assert.ok(isMega('Alakazam-Mega'));
+    assert.ok(isMega('Garchomp-Mega'));
+  });
+
+  it('returns false for non-Mega species', () => {
+    assert.ok(!isMega('Blastoise'));
+    assert.ok(!isMega('Dragapult'));
+    assert.ok(!isMega('Incineroar'));
+  });
+});
+
+describe('Mega constraint in scoreLeadPairs', () => {
+  const chaos = mockChaosData({
+    'Gholdengo': { spreads: ['Modest:0/0/0/32/0/32'], moves: ['Make It Rain', 'Shadow Ball'] },
+  });
+
+  it('excludes lead pairs where both mons are Mega', () => {
+    const yourSets = [
+      mockSet('Blastoise-Mega',  { moves: ['Water Spout', 'Protect'] }),
+      mockSet('Alakazam-Mega',   { moves: ['Psychic', 'Protect'] }),
+      mockSet('Incineroar',      { moves: ['Fake Out', 'Flare Blitz', 'Protect'] }),
+    ];
+    const results = scoreLeadPairs(yourSets, ['Gholdengo'], chaos);
+    // C(3,2) = 3 pairs, but Blastoise-Mega + Alakazam-Mega must be excluded
+    assert.equal(results.length, 2);
+    for (const r of results) {
+      assert.ok(!(isMega(r.monA) && isMega(r.monB)),
+        `Invalid pair found: ${r.monA} + ${r.monB}`);
+    }
+  });
+
+  it('allows a lead pair where only one mon is Mega', () => {
+    const yourSets = [
+      mockSet('Blastoise-Mega', { moves: ['Water Spout', 'Protect'] }),
+      mockSet('Incineroar',     { moves: ['Fake Out', 'Flare Blitz', 'Protect'] }),
+    ];
+    const results = scoreLeadPairs(yourSets, ['Gholdengo'], chaos);
+    assert.equal(results.length, 1);
+    assert.ok(isMega(results[0].monA) || isMega(results[0].monB));
+  });
+
+  it('back pair contains no Mega when lead is already Mega', () => {
+    // 3 non-Mega mons available so a valid back pair always exists
+    const yourSets = [
+      mockSet('Blastoise-Mega', { moves: ['Water Spout', 'Protect'] }),
+      mockSet('Incineroar',     { moves: ['Fake Out', 'Flare Blitz', 'Protect'] }),
+      mockSet('Togekiss',       { moves: ['Dazzling Gleam', 'Follow Me', 'Protect'] }),
+      mockSet('Garchomp',       { moves: ['Earthquake', 'Protect'] }),
+    ];
+    const results = scoreLeadPairs(yourSets, ['Gholdengo'], chaos);
+    for (const r of results) {
+      if (!r.backPair) continue;
+      const leadHasMega = isMega(r.monA) || isMega(r.monB);
+      const backHasMega = isMega(r.backPair.monA) || isMega(r.backPair.monB);
+      if (leadHasMega) {
+        assert.ok(!backHasMega,
+          `Lead has Mega but back pair still contains Mega: ${r.backPair.monA} + ${r.backPair.monB}`);
+      }
+    }
+  });
+
+  it('returns null backPair when no legal bring exists', () => {
+    // 2 Megas + 1 non-Mega: if lead is Mega + non-Mega, remaining back is just
+    // the other Mega — no valid bring (would require 2 Megas in bring)
+    const yourSets = [
+      mockSet('Blastoise-Mega', { moves: ['Water Spout', 'Protect'] }),
+      mockSet('Incineroar',     { moves: ['Fake Out', 'Flare Blitz', 'Protect'] }),
+      mockSet('Alakazam-Mega',  { moves: ['Psychic', 'Protect'] }),
+    ];
+    const results = scoreLeadPairs(yourSets, ['Gholdengo'], chaos);
+    // Blastoise-Mega + Incineroar lead → back has only Alakazam-Mega (invalid)
+    // Alakazam-Mega  + Incineroar lead → back has only Blastoise-Mega (invalid)
+    for (const r of results) {
+      if (isMega(r.monA) || isMega(r.monB)) {
+        assert.equal(r.backPair, null,
+          `Expected null backPair for ${r.monA} + ${r.monB} but got ${JSON.stringify(r.backPair)}`);
+      }
+    }
+  });
+
+  it('back pair may contain one Mega when no lead is Mega', () => {
+    const yourSets = [
+      mockSet('Incineroar',     { moves: ['Fake Out', 'Flare Blitz', 'Protect'] }),
+      mockSet('Garchomp',       { moves: ['Earthquake', 'Protect'] }),
+      mockSet('Blastoise-Mega', { moves: ['Water Spout', 'Protect'] }),
+      mockSet('Rillaboom',      { moves: ['Grassy Glide', 'Protect'] }),
+    ];
+    const results = scoreLeadPairs(yourSets, ['Gholdengo'], chaos);
+    // Find a result where neither lead is Mega
+    const nonMegaLead = results.find(r => !isMega(r.monA) && !isMega(r.monB));
+    if (nonMegaLead?.backPair) {
+      const backMegaCount = [nonMegaLead.backPair.monA, nonMegaLead.backPair.monB]
+        .filter(isMega).length;
+      assert.ok(backMegaCount <= 1, `Back pair has ${backMegaCount} Megas, expected ≤1`);
+    }
+  });
+});
+
+// ── 7. getOpponentRep ────────────────────────────────────────────────────────
 
 describe('getOpponentRep', () => {
   it('returns null for a species not in chaos data', () => {
