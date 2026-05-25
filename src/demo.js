@@ -11,14 +11,20 @@ import { renderSpeedLadder } from './ui/speedLadder.js';
 import { renderSummary } from './ui/summary.js';
 import { renderSidebarTracker } from './ui/sidebarTracker.js';
 import { renderMatchupLookup } from './ui/matchupLookup.js';
+import { initLeadSelectorTab } from './ui/leadSelector.js';
+import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
+import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
 
 preloadStats();
 
 let analysisData      = null;
+let threatMatrix      = null;
 let currentPlayerSets = null;
 let currentOpponents  = [];
 let lastFieldKey      = '';
 let reanalyzing       = false;
+
+const leadSelector = initLeadSelectorTab(document.getElementById('tab-lead'));
 
 function fieldKey(state) {
   const hhStr = Object.entries(state.myHelpingHand ?? {})
@@ -80,7 +86,7 @@ async function renderReactive(state) {
 
   // Filter to active (non-KO'd) Pokémon before rendering all tabs
   const filtered = filterByActive(analysisData, state);
-  renderSummary(filtered, document.getElementById('tab-summary'));
+  renderSummary(filtered, document.getElementById('tab-summary'), threatMatrix);
   renderOffense(filtered.offense, filtered.offenseExpanded, document.getElementById('tab-offense'), state);
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
   renderMatchupLookup(filtered, document.getElementById('tab-matchup'), state);
@@ -132,6 +138,16 @@ tabs.forEach(tab => {
     errorEl.textContent = `Calc error: ${e.message}`;
     statusEl.textContent = '';
     return;
+  }
+
+  // Lead selector analysis — use default format (first in list)
+  try {
+    const chaos   = await loadChaosData(KNOWN_FORMATS[0].prefix);
+    const results = scoreLeadPairs(playerSets, opponentNames, chaos);
+    threatMatrix  = buildThreatMatrix(playerSets, opponentNames, chaos);
+    leadSelector.render(results.slice(0, 5), playerSets.length);
+  } catch (e) {
+    leadSelector.showMessage(`Lead analysis unavailable: ${e.message}`);
   }
 
   statusEl.textContent = '';

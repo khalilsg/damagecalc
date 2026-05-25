@@ -97,7 +97,7 @@ function buildOpponentPokemon(rep) {
  * Returns { pct: number (max damage %), moveName: string | null }.
  */
 export function bestDamage(attacker, defender, moves) {
-  let best = { pct: 0, moveName: null };
+  let best = { pct: 0, minPct: 0, moveName: null };
   for (const moveName of moves) {
     if (SKIP_MOVES.has(moveName)) continue;
     try {
@@ -108,17 +108,20 @@ export function bestDamage(attacker, defender, moves) {
 
       const dmg = result.damage;
       const hp  = defender.stats.hp;
-      let maxDmg;
+      let maxDmg, minDmg;
       if (Array.isArray(dmg) && Array.isArray(dmg[0])) {
-        // Multi-hit (e.g. Dragon Darts, Population Bomb): sum max across hits
+        // Multi-hit (e.g. Dragon Darts, Population Bomb): sum min/max across all hits
         maxDmg = dmg.reduce((sum, hit) => sum + hit[hit.length - 1], 0);
+        minDmg = dmg.reduce((sum, hit) => sum + hit[0], 0);
       } else {
         const rolls = Array.isArray(dmg) ? dmg : [dmg];
         maxDmg = rolls[rolls.length - 1];
+        minDmg = rolls[0];
       }
 
-      const pct = (maxDmg / hp) * 100;
-      if (pct > best.pct) best = { pct, moveName };
+      const pct    = (maxDmg / hp) * 100;
+      const minPct = (minDmg / hp) * 100;
+      if (pct > best.pct) best = { pct, minPct, moveName };
     } catch { /* skip unrecognized moves */ }
   }
   return best;
@@ -334,10 +337,10 @@ export function buildThreatMatrix(yourSets, opponentSpecies, chaosData) {
       .filter(move => !SKIP_MOVES.has(move))
       .map(moveName => {
         const targets = yourMons
-          .map(({ resolvedName, pokemon }) => ({
-            mon: resolvedName,
-            pct: bestDamage(oppPokemon, pokemon, [moveName]).pct,
-          }))
+          .map(({ resolvedName, pokemon }) => {
+            const { pct, minPct } = bestDamage(oppPokemon, pokemon, [moveName]);
+            return { mon: resolvedName, pct, minPct };
+          })
           .filter(t => t.pct >= 30)
           .sort((a, b) => b.pct - a.pct);
         return { move: moveName, targets };
@@ -346,8 +349,8 @@ export function buildThreatMatrix(yourSets, opponentSpecies, chaosData) {
 
     // Your mons' best moves vs this opponent
     const answers = yourMons.map(({ resolvedName, pokemon, moves }) => {
-      const best = bestDamage(pokemon, oppPokemon, moves);
-      return { mon: resolvedName, move: best.moveName, pct: best.pct };
+      const { moveName: move, pct, minPct } = bestDamage(pokemon, oppPokemon, moves);
+      return { mon: resolvedName, move, pct, minPct };
     });
 
     return {

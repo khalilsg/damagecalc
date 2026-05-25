@@ -12,7 +12,6 @@
  *   leadSelector.showMessage('Some status text');
  */
 
-import { KNOWN_FORMATS } from '../leadSelector/chaos.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,19 +55,6 @@ export function initLeadSelectorTab(container) {
   const wrap = el('div', 'ls-wrap');
   container.append(wrap);
 
-  // ── Format selector ─────────────────────────────────────────────────────────
-  const fmtRow = el('div', 'ls-field');
-  fmtRow.append(el('label', 'ls-label', 'Format'));
-  const fmtSelect = el('select', 'ls-format-select');
-  KNOWN_FORMATS.forEach(f => {
-    const o = document.createElement('option');
-    o.value       = f.prefix;
-    o.textContent = f.label;
-    fmtSelect.appendChild(o);
-  });
-  fmtRow.append(fmtSelect);
-  wrap.append(fmtRow);
-
   // ── Status / placeholder ────────────────────────────────────────────────────
   const statusEl = el('div', 'ls-status', 'Run ANALYZE MATCHUP to generate lead recommendations.');
   wrap.append(statusEl);
@@ -79,9 +65,6 @@ export function initLeadSelectorTab(container) {
 
   // ── Controller ──────────────────────────────────────────────────────────────
   return {
-    /** Currently selected chaos format prefix. */
-    getFormat() { return fmtSelect.value; },
-
     /** Render lead pair results into the tab. */
     render(results, teamSize) {
       statusEl.style.display = 'none';

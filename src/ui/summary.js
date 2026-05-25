@@ -16,6 +16,30 @@ function tmBarColor(pct) {
   return '#888';
 }
 
+function tmBarLight(pct) {
+  if (pct >= 100) return 'rgba(42,122,42,0.28)';
+  if (pct >= 50)  return 'rgba(176,112,0,0.28)';
+  return 'rgba(136,136,136,0.28)';
+}
+
+/** Apply a two-segment gradient to a track element: solid fill to minPct, lighter fill to maxPct. */
+function applyRangeBar(track, minPct, maxPct) {
+  const min    = Math.min(100, minPct ?? 0);
+  const max    = Math.min(100, maxPct);
+  const solid  = tmBarColor(maxPct);
+  const light  = tmBarLight(maxPct);
+  if (max <= 0) return;
+  track.style.backgroundImage = (min >= 1 && min < max - 0.5)
+    ? `linear-gradient(to right, ${solid} ${min}%, ${light} ${min}%, ${light} ${max}%, transparent ${max}%)`
+    : `linear-gradient(to right, ${solid} ${max}%, transparent ${max}%)`;
+}
+
+function pctRange(minPct, maxPct) {
+  const lo = Math.round(minPct ?? maxPct);
+  const hi = Math.round(maxPct);
+  return lo === hi ? `${hi}%` : `${lo}–${hi}%`;
+}
+
 function buildThreatCard(entry) {
   const card = el('div', 'matchup-card');
 
@@ -64,10 +88,10 @@ function buildThreatCard(entry) {
       moveSpan.textContent = move;
       row.appendChild(moveSpan);
       const tSpan = el('span', 'tm-targets');
-      for (const { mon, pct } of targets) {
+      for (const { mon, pct, minPct } of targets) {
         const cls = pct >= 100 ? 'tm-target tm-ohko' : pct >= 50 ? 'tm-target tm-warn' : 'tm-target tm-chip';
         const t   = el('span', cls);
-        t.textContent = `${mon} ${Math.round(pct)}%`;
+        t.textContent = `${mon} ${pctRange(minPct, pct)}`;
         tSpan.appendChild(t);
       }
       row.appendChild(tSpan);
@@ -102,13 +126,10 @@ function buildThreatCard(entry) {
       mSpan.textContent = move;
       row.appendChild(mSpan);
       const track = el('div', 'tm-answer-track');
-      const fill  = el('div', 'tm-answer-fill');
-      fill.style.width           = `${Math.min(100, pct)}%`;
-      fill.style.backgroundColor = tmBarColor(pct);
-      track.appendChild(fill);
+      applyRangeBar(track, minPct, pct);
       row.appendChild(track);
       const pSpan = el('span', 'tm-answer-pct');
-      pSpan.textContent = `${Math.round(pct)}%`;
+      pSpan.textContent = pctRange(minPct, pct);
       row.appendChild(pSpan);
     }
     answers.appendChild(row);

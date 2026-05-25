@@ -58,6 +58,8 @@
       min-width: 280px;
     }
 
+    .input-group-narrow { flex: 0 1 auto; min-width: unset; }
+
     label {
       font-size: 0.75rem;
       font-weight: 600;
@@ -359,10 +361,8 @@
     .tm-answer-move  { font-size: 0.69rem; color: #666; flex: 0 0 88px;
                        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .tm-no-move      { color: #bbb; }
-    .tm-answer-track { flex: 1; background: #eee; border-radius: 3px;
-                       height: 6px; overflow: hidden; }
-    .tm-answer-fill  { height: 6px; border-radius: 3px; transition: width 0.3s; }
-    .tm-answer-pct   { font-size: 0.69rem; color: #666; width: 30px;
+    .tm-answer-track { flex: 1; background: #eee; border-radius: 3px; height: 6px; }
+    .tm-answer-pct   { font-size: 0.69rem; color: #666; min-width: 56px;
                        text-align: right; flex-shrink: 0; }
 
     /* ---- Output cards ---- */
@@ -874,6 +874,10 @@ Boost tags on the first line: [+2 SpA] [+1 Spe]"></textarea>
             <div id="dropdown"></div>
           </div>
           <div class="selected-defenders" id="selected-defenders"></div>
+        </div>
+        <div class="input-group input-group-narrow">
+          <label>Format</label>
+          <select id="format-select" class="ls-format-select"></select>
         </div>
       </div>
 

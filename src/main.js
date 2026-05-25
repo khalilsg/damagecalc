@@ -12,7 +12,7 @@ import { renderSummary } from './ui/summary.js';
 import { renderSidebarTracker } from './ui/sidebarTracker.js';
 import { renderMatchupLookup } from './ui/matchupLookup.js';
 import { initLeadSelectorTab } from './ui/leadSelector.js';
-import { loadChaosData } from './leadSelector/chaos.js';
+import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
 import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
 
 preloadStats();
@@ -229,6 +229,15 @@ function switchTab(id) {
 }
 
 // --- Lead Selector tab ---
+// Populate the top-level format dropdown
+const formatSelect = document.getElementById('format-select');
+KNOWN_FORMATS.forEach(f => {
+  const o = document.createElement('option');
+  o.value       = f.prefix;
+  o.textContent = f.label;
+  formatSelect.appendChild(o);
+});
+
 const leadSelector = initLeadSelectorTab(document.getElementById('tab-lead'));
 
 // --- Defender dropdown with arrow-key navigation ---
@@ -355,7 +364,7 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
   // ── Lead selector analysis (uses same team + opponents) ────────────────────
   threatMatrix = null;
   try {
-    const chaos   = await loadChaosData(leadSelector.getFormat());
+    const chaos   = await loadChaosData(formatSelect.value);
     const results = scoreLeadPairs(playerSets, selectedDefenders, chaos);
     threatMatrix  = buildThreatMatrix(playerSets, selectedDefenders, chaos);
     leadSelector.render(results.slice(0, 5), playerSets.length);
