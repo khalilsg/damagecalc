@@ -11,7 +11,8 @@
     "test": "node --test tests/*.test.js",
     "build": "vite build",
     "dev": "vite",
-    "pokebench": "node pokebench/index.js"
+    "pokebench": "node pokebench/index.js",
+    "update-chaos": "node scripts/update-chaos.js"
   },
   "dependencies": {
     "@smogon/calc": "^0.11.0",
