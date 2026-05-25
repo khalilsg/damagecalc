@@ -39,7 +39,7 @@ export function applySpeedModifier(speed, modifier) {
 /**
  * Speed scenarios for the player's pokemon.
  * Basic: actual speed as built.
- * Extra: scarf, tailwind, -1/-2 stages, plus any set boosts.
+ * Full: adds +1 and +2 speed stages.
  */
 export function getPlayerSpeedScenarios(baseSpeed, set) {
   const iv     = set.ivs?.spe ?? 31;
@@ -50,22 +50,10 @@ export function getPlayerSpeedScenarios(baseSpeed, set) {
 
   const basic = [{ label: 'Base', speed: base, isBasic: true }];
 
-  // Set boosts (e.g. [+1 Spe], [+2 Spe])
-  const setBoosts = [];
-  for (const boost of (set.boosts ?? [])) {
-    const s = boost.stat.toLowerCase();
-    if (s === 'spe' || s === 'speed') {
-      setBoosts.push({ label: `${boost.modifier > 0 ? '+' : ''}${boost.modifier} Spe`, speed: applySpeedStage(base, boost.modifier), isBasic: false });
-    }
-  }
-
   const full = [
     ...basic,
-    ...setBoosts,
-    { label: 'Tailwind', speed: applySpeedModifier(base, 'tailwind'), isBasic: false },
-    { label: 'Scarf',    speed: applySpeedModifier(base, 'scarf'),    isBasic: false },
-    { label: '-1 Spe',   speed: applySpeedStage(base, -1),            isBasic: false },
-    { label: '-2 Spe',   speed: applySpeedStage(base, -2),            isBasic: false },
+    { label: '+1 Spe', speed: applySpeedStage(base, 1), isBasic: false },
+    { label: '+2 Spe', speed: applySpeedStage(base, 2), isBasic: false },
   ];
 
   return { basic, full };
@@ -75,7 +63,7 @@ export function getPlayerSpeedScenarios(baseSpeed, set) {
  * Speed scenarios for opponent pokemon.
  * Champions format EVs: max 32.
  * Basic: min (0 EVs, neutral), + (32 EVs, neutral), ++ (32 EVs, positive).
- * Full: adds +1/+2 stage, scarf, tailwind variants.
+ * Full: adds +1 and +2 speed stages across all three base variants.
  */
 export function getOpponentSpeedScenarios(baseSpeed) {
   const min      = calcSpeed(baseSpeed, 31, scaleEV( 0), 50, 'Serious');
@@ -90,15 +78,12 @@ export function getOpponentSpeedScenarios(baseSpeed) {
 
   const full = [
     ...basic,
-    { label: '+1',       speed: applySpeedStage(min, 1),               isBasic: false },
-    { label: '+ +1',     speed: applySpeedStage(maxNeu, 1),            isBasic: false },
-    { label: '++ +1',    speed: applySpeedStage(maxPos, 1),            isBasic: false },
-    { label: '+2',       speed: applySpeedStage(min, 2),               isBasic: false },
-    { label: '++ +2',    speed: applySpeedStage(maxPos, 2),            isBasic: false },
-    { label: 'Scarf',    speed: applySpeedModifier(min, 'scarf'),      isBasic: false },
-    { label: '++Scarf',  speed: applySpeedModifier(maxPos, 'scarf'),   isBasic: false },
-    { label: 'Tailwind', speed: applySpeedModifier(min, 'tailwind'),   isBasic: false },
-    { label: '++Tailwind', speed: applySpeedModifier(maxPos, 'tailwind'), isBasic: false },
+    { label: '+1',    speed: applySpeedStage(min,    1), isBasic: false },
+    { label: '+ +1',  speed: applySpeedStage(maxNeu, 1), isBasic: false },
+    { label: '++ +1', speed: applySpeedStage(maxPos, 1), isBasic: false },
+    { label: '+2',    speed: applySpeedStage(min,    2), isBasic: false },
+    { label: '+ +2',  speed: applySpeedStage(maxNeu, 2), isBasic: false },
+    { label: '++ +2', speed: applySpeedStage(maxPos, 2), isBasic: false },
   ];
 
   return { basic, full };

@@ -7,7 +7,8 @@ export function renderSummary(analysisData, container) {
 
   for (const { playerName, matchups } of offense) {
     for (const { opponentName, scenarios } of matchups) {
-      for (const { rows } of scenarios) {
+      for (const { label, rows } of scenarios) {
+        if (label !== 'Base') continue;
         for (const { formattedBase, kochanceText, classification } of rows) {
           const e = { playerName, opponentName, desc: formattedBase, kochance: kochanceText };
           if (classification === 'guaranteed-ohko') guaranteedOHKOs.push(e);
@@ -23,7 +24,8 @@ export function renderSummary(analysisData, container) {
 
   for (const { playerName, matchups } of defense) {
     for (const { opponentName, scenarios } of matchups) {
-      for (const { rows } of scenarios) {
+      for (const { label, rows } of scenarios) {
+        if (label !== 'Base') continue;
         for (const { formattedBase, kochanceText, classification, isInBattle } of rows) {
           if (isInBattle) continue;
           const e = { playerName, opponentName, desc: formattedBase, kochance: kochanceText };
