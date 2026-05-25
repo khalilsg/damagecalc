@@ -362,6 +362,56 @@
     .ls-back-row    { color: #1a1a1a; }
     .ls-covers      { color: #555; font-style: italic; }
 
+    /* ── Threat Matrix ──────────────────────────────────────────────────── */
+    .tm-wrap        { margin-top: 32px; border-top: 2px solid #ddd; padding-top: 22px; }
+    .tm-heading     { font-size: 0.82rem; font-weight: 700; color: #333;
+                      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+    .tm-grid        { display: grid;
+                      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+                      gap: 14px; }
+    .tm-card        { background: #fff; border: 1px solid #ddd; border-radius: 8px;
+                      padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+    .tm-card-header { display: flex; align-items: baseline;
+                      justify-content: space-between; gap: 8px; }
+    .tm-opp-name    { font-weight: 700; font-size: 0.9rem; color: #1a1a1a; }
+    .tm-opp-item    { font-size: 0.72rem; color: #777; }
+    .tm-set-info    { font-size: 0.72rem; color: #888; }
+    .tm-no-data     { font-size: 0.75rem; color: #aaa; font-style: italic; }
+
+    .tm-moves-row   { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tm-move-chip   { font-size: 0.68rem; background: #eef; border: 1px solid #cce;
+                      border-radius: 3px; padding: 2px 6px; color: #335; }
+    .tm-move-chip.tm-skip { background: #f5f5f5; border-color: #e0e0e0; color: #aaa; }
+
+    .tm-section-head { font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+                       letter-spacing: 0.05em; color: #777; border-top: 1px solid #eee;
+                       padding-top: 6px; margin-top: 2px; }
+
+    .tm-threats     { display: flex; flex-direction: column; gap: 5px; }
+    .tm-threat-row  { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .tm-threat-move { font-size: 0.75rem; font-weight: 600; color: #222;
+                      min-width: 100px; flex-shrink: 0; }
+    .tm-targets     { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tm-target      { font-size: 0.7rem; padding: 1px 5px; border-radius: 3px; }
+    .tm-ohko        { background: #fde8e8; color: #900; font-weight: 600; }
+    .tm-warn        { background: #fef0d0; color: #7a4000; }
+    .tm-chip        { background: #f2f2f2; color: #555; }
+    .tm-no-threats  { font-size: 0.75rem; color: #bbb; font-style: italic; }
+
+    .tm-answers      { display: flex; flex-direction: column; gap: 4px; }
+    .tm-answer-row   { display: flex; align-items: center; gap: 6px; }
+    .tm-answer-mon   { font-size: 0.71rem; color: #444; flex: 0 0 130px;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tm-answer-move  { font-size: 0.69rem; color: #666; flex: 0 0 88px;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tm-no-move      { color: #bbb; }
+    .tm-answer-track { flex: 1; background: #eee; border-radius: 3px;
+                       height: 6px; overflow: hidden; }
+    .tm-answer-fill  { height: 6px; border-radius: 3px; transition: width 0.3s; }
+    .tm-answer-pct   { font-size: 0.69rem; color: #666; width: 30px;
+                       text-align: right; flex-shrink: 0; }
+
     /* ---- Output cards ---- */
     .player-section { margin-bottom: 28px; }
 

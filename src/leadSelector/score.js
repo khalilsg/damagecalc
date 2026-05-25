@@ -291,6 +291,78 @@ export function scoreLeadPairs(yourSets, opponentSpecies, chaosData) {
   }));
 }
 
+// ── Threat matrix ────────────────────────────────────────────────────────────
+
+/**
+ * For each opponent species, compute:
+ *   - threatsOut: their attacking moves that deal ≥30% to at least one of your mons
+ *   - answers:    your mons' best move against them
+ *
+ * @param {object[]} yourSets        Parsed sets from parseSets()
+ * @param {string[]} opponentSpecies Species names
+ * @param {object}   chaosData       Trimmed chaos JSON from loadChaosData()
+ *
+ * @returns {ThreatEntry[]}
+ *   ThreatEntry: {
+ *     name:       string,
+ *     spread:     { nature, evs },
+ *     moves:      string[],   // all chaos moves (up to 8), including support
+ *     item:       string|null,
+ *     usage:      number,
+ *     inChaos:    boolean,
+ *     threatsOut: [{ move, targets: [{ mon, pct }] }],
+ *     answers:    [{ mon, move, pct }],
+ *   }
+ */
+export function buildThreatMatrix(yourSets, opponentSpecies, chaosData) {
+  const yourMons = yourSets.map(set => {
+    const resolvedName = resolveSpeciesName(set.name);
+    const pokemon      = buildYourPokemon(set, resolvedName);
+    const moves        = (set.moves ?? []).filter(m => m);
+    return { resolvedName, pokemon, moves };
+  });
+
+  return opponentSpecies.map(species => {
+    const raw = getOpponentRep(chaosData, species);
+    const rep = raw ?? {
+      name: species, spread: { nature: 'Serious', evs: {} }, moves: [], item: null, usage: 0,
+    };
+    const oppPokemon = buildOpponentPokemon(rep);
+
+    // Their attacking moves vs each of your mons (only show ≥30% hits)
+    const threatsOut = rep.moves
+      .filter(move => !SKIP_MOVES.has(move))
+      .map(moveName => {
+        const targets = yourMons
+          .map(({ resolvedName, pokemon }) => ({
+            mon: resolvedName,
+            pct: bestDamage(oppPokemon, pokemon, [moveName]).pct,
+          }))
+          .filter(t => t.pct >= 30)
+          .sort((a, b) => b.pct - a.pct);
+        return { move: moveName, targets };
+      })
+      .filter(({ targets }) => targets.length > 0);
+
+    // Your mons' best moves vs this opponent
+    const answers = yourMons.map(({ resolvedName, pokemon, moves }) => {
+      const best = bestDamage(pokemon, oppPokemon, moves);
+      return { mon: resolvedName, move: best.moveName, pct: best.pct };
+    });
+
+    return {
+      name:       rep.name,
+      spread:     rep.spread,
+      moves:      rep.moves,
+      item:       rep.item,
+      usage:      rep.usage,
+      inChaos:    raw !== null,
+      threatsOut,
+      answers,
+    };
+  });
+}
+
 // ── Back pair selection ───────────────────────────────────────────────────────
 
 /**

@@ -21,6 +21,7 @@ import {
   leadWeight,
   bestDamage,
   scoreLeadPairs,
+  buildThreatMatrix,
   isMega,
   SKIP_MOVES,
   LEAD_SIGNAL_WEIGHTS,
@@ -498,7 +499,96 @@ describe('Mega constraint in scoreLeadPairs', () => {
   });
 });
 
-// ── 7. getOpponentRep ────────────────────────────────────────────────────────
+// ── 7. buildThreatMatrix ─────────────────────────────────────────────────────
+
+describe('buildThreatMatrix', () => {
+  const chaos = mockChaosData({
+    'Incineroar': {
+      moves:   ['Fake Out', 'Flare Blitz', 'Knock Off', 'U-turn'],
+      spreads: ['Careful:28/0/0/0/4/0'],
+      items:   ['Assault Vest'],
+    },
+    'Gholdengo': {
+      moves:   ['Make It Rain', 'Shadow Ball', 'Protect'],
+      spreads: ['Modest:0/0/4/28/0/28'],
+      items:   ['Choice Specs'],
+    },
+  });
+
+  const yourSets = [
+    mockSet('Blastoise-Mega', { moves: ['Water Spout', 'Ice Beam', 'Protect'] }),
+    mockSet('Rillaboom',      { moves: ['Grassy Glide', 'Wood Hammer', 'Protect'] }),
+    mockSet('Incineroar',     { moves: ['Fake Out', 'Flare Blitz', 'Knock Off'] }),
+  ];
+
+  it('returns one entry per opponent species', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar', 'Gholdengo'], chaos);
+    assert.equal(matrix.length, 2);
+    assert.equal(matrix[0].name, 'Incineroar');
+    assert.equal(matrix[1].name, 'Gholdengo');
+  });
+
+  it('marks species found in chaos data as inChaos:true', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar'], chaos);
+    assert.equal(matrix[0].inChaos, true);
+  });
+
+  it('marks species absent from chaos data as inChaos:false', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Pikachu'], chaos);
+    assert.equal(matrix[0].inChaos, false);
+  });
+
+  it('includes item and spread from chaos data', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar'], chaos);
+    assert.equal(matrix[0].item, 'Assault Vest');
+    assert.equal(matrix[0].spread.nature, 'Careful');
+  });
+
+  it('threatsOut excludes support moves', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar'], chaos);
+    const moveNames = matrix[0].threatsOut.map(t => t.move);
+    // Fake Out is in SKIP_MOVES — should not appear in threatsOut
+    assert.ok(!moveNames.includes('Fake Out'), 'Fake Out should be excluded from threatsOut');
+  });
+
+  it('threatsOut only includes moves that deal ≥30% to at least one mon', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Gholdengo'], chaos);
+    for (const { targets } of matrix[0].threatsOut) {
+      assert.ok(targets.length > 0, 'every threatsOut entry should have at least one target');
+      for (const { pct } of targets) {
+        assert.ok(pct >= 30, `target pct ${pct} should be ≥30`);
+      }
+    }
+  });
+
+  it('answers has one entry per player mon', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar'], chaos);
+    assert.equal(matrix[0].answers.length, yourSets.length);
+  });
+
+  it('answers reference correct player mon names', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar'], chaos);
+    const monNames = matrix[0].answers.map(a => a.mon);
+    assert.ok(monNames.includes('Blastoise-Mega'));
+    assert.ok(monNames.includes('Rillaboom'));
+    assert.ok(monNames.includes('Incineroar'));
+  });
+
+  it('answers pct is 0 when player has no damaging moves', () => {
+    const noMoves = [mockSet('Togekiss', { moves: ['Follow Me', 'Tailwind', 'Protect'] })];
+    const matrix = buildThreatMatrix(noMoves, ['Incineroar'], chaos);
+    assert.equal(matrix[0].answers[0].pct, 0);
+    assert.equal(matrix[0].answers[0].move, null);
+  });
+
+  it('moves list includes all chaos moves (including support)', () => {
+    const matrix = buildThreatMatrix(yourSets, ['Incineroar'], chaos);
+    assert.ok(matrix[0].moves.includes('Fake Out'), 'support moves appear in the moves list');
+    assert.ok(matrix[0].moves.includes('Flare Blitz'));
+  });
+});
+
+// ── 8. getOpponentRep ────────────────────────────────────────────────────────
 
 describe('getOpponentRep', () => {
   it('returns null for a species not in chaos data', () => {
