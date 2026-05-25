@@ -92,19 +92,118 @@ async function renderReactive(state) {
   renderSpeedLadder(filtered.speed, document.getElementById('tab-speed'), state);
 }
 
-// --- Teams dropdown ---
+// --- Teams dropdown + persistent slots ---
+
 const teamSelect = document.getElementById('team-select');
-TEAMS.forEach(t => {
-  const opt = document.createElement('option');
-  opt.value = t.name;
-  opt.textContent = t.name;
-  teamSelect.appendChild(opt);
-});
+const teamInput  = document.getElementById('team-input');
+const saveBtn    = document.getElementById('team-save-btn');
+const shareBtn   = document.getElementById('team-share-btn');
+const deleteBtn  = document.getElementById('team-delete-btn');
+
+const STORAGE_KEY = 'kcalc_teams';
+let activeSlotName = null;  // name of the currently loaded saved slot (null = none)
+
+function getSavedTeams() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
+  catch { return []; }
+}
+function setSavedTeams(teams) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(teams));
+}
+
+function rebuildTeamDropdown() {
+  teamSelect.innerHTML = '<option value="" disabled selected>Load a team…</option>';
+  if (TEAMS.length > 0) {
+    const g = document.createElement('optgroup');
+    g.label = 'Presets';
+    TEAMS.forEach(t => {
+      const o = document.createElement('option');
+      o.value = `preset:${t.name}`;
+      o.textContent = t.name;
+      g.appendChild(o);
+    });
+    teamSelect.appendChild(g);
+  }
+  const saved = getSavedTeams();
+  if (saved.length > 0) {
+    const g = document.createElement('optgroup');
+    g.label = 'My Teams';
+    saved.forEach(t => {
+      const o = document.createElement('option');
+      o.value = `saved:${t.name}`;
+      o.textContent = t.name;
+      g.appendChild(o);
+    });
+    teamSelect.appendChild(g);
+  }
+}
+
 teamSelect.addEventListener('change', () => {
-  const team = TEAMS.find(t => t.name === teamSelect.value);
-  if (team) document.getElementById('team-input').value = team.text;
+  const val = teamSelect.value;
   teamSelect.value = '';
+  if (val.startsWith('preset:')) {
+    const team = TEAMS.find(t => t.name === val.slice(7));
+    if (team) teamInput.value = team.text;
+    activeSlotName = null;
+    deleteBtn.disabled = true;
+  } else if (val.startsWith('saved:')) {
+    const name = val.slice(6);
+    const team = getSavedTeams().find(t => t.name === name);
+    if (team) teamInput.value = team.text;
+    activeSlotName = name;
+    deleteBtn.disabled = false;
+  }
 });
+
+// Save
+saveBtn.addEventListener('click', () => {
+  const text = teamInput.value.trim();
+  if (!text) return;
+  const name = window.prompt('Save team as:', activeSlotName ?? '');
+  if (!name?.trim()) return;
+  const trimmed = name.trim();
+  const teams = getSavedTeams().filter(t => t.name !== trimmed);
+  teams.unshift({ name: trimmed, text, savedAt: Date.now() });
+  setSavedTeams(teams);
+  activeSlotName = trimmed;
+  deleteBtn.disabled = false;
+  rebuildTeamDropdown();
+});
+
+// Share
+shareBtn.addEventListener('click', () => {
+  const text = teamInput.value.trim();
+  if (!text) return;
+  const encoded = btoa(unescape(encodeURIComponent(text)));
+  const url = `${location.origin}${location.pathname}?team=${encoded}`;
+  navigator.clipboard.writeText(url)
+    .then(() => {
+      shareBtn.textContent = 'Copied!';
+      shareBtn.classList.add('success');
+      setTimeout(() => { shareBtn.textContent = 'Share'; shareBtn.classList.remove('success'); }, 2000);
+    })
+    .catch(() => window.prompt('Copy this link:', url));
+});
+
+// Delete
+deleteBtn.addEventListener('click', () => {
+  if (!activeSlotName) return;
+  if (!window.confirm(`Delete "${activeSlotName}"?`)) return;
+  setSavedTeams(getSavedTeams().filter(t => t.name !== activeSlotName));
+  activeSlotName = null;
+  deleteBtn.disabled = true;
+  rebuildTeamDropdown();
+});
+
+// On load: decode ?team= param if present
+(function checkUrlTeam() {
+  const param = new URLSearchParams(location.search).get('team');
+  if (!param) return;
+  try { teamInput.value = decodeURIComponent(escape(atob(param))); }
+  catch { /* ignore malformed */ }
+})();
+
+rebuildTeamDropdown();
 
 // --- Tab switching ---
 const tabs   = document.querySelectorAll('.tab-btn');
