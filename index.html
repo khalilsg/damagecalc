@@ -263,13 +263,10 @@
 
     /* ---- Lead Selector tab ---- */
     .ls-wrap        { display: flex; flex-direction: column; gap: 20px; }
-    .ls-input-area  { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
 
     .ls-field       { display: flex; flex-direction: column; gap: 5px; }
     .ls-label       { font-size: 0.75rem; font-weight: 600; color: #444;
                       text-transform: uppercase; letter-spacing: 0.5px; }
-    .ls-count       { font-weight: 400; color: #666; text-transform: none; letter-spacing: 0; }
-    .ls-search-field { flex: 1; min-width: 260px; }
 
     .ls-format-select {
       background: #fff; border: 1px solid #ccc; color: #333;
@@ -278,38 +275,7 @@
     }
     .ls-format-select:focus { outline: none; border-color: #555; }
 
-    .ls-search-wrapper { position: relative; }
-    .ls-search {
-      background: #fff; border: 1px solid #ccc; color: #1a1a1a;
-      font-family: inherit; font-size: 0.85rem; padding: 7px 10px;
-      border-radius: 5px; width: 100%; outline: none;
-    }
-    .ls-search:focus { border-color: #555; }
-
-    .ls-dropdown {
-      display: none; position: absolute; top: 100%; left: 0; right: 0;
-      background: #fff; border: 1px solid #ccc; border-top: none;
-      border-radius: 0 0 5px 5px; max-height: 200px; overflow-y: auto;
-      z-index: 100; box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    }
-    .ls-dropdown.open { display: block; }
-
-    .ls-tags {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      margin-top: 6px; min-height: 28px;
-    }
-
-    .ls-btn {
-      background: #222; border: none; color: #fff;
-      font-family: inherit; font-size: 0.85rem; font-weight: 600;
-      padding: 8px 20px; border-radius: 5px; cursor: pointer;
-      letter-spacing: 0.5px; white-space: nowrap; align-self: flex-end;
-      transition: background 0.15s;
-    }
-    .ls-btn:hover:not(:disabled) { background: #444; }
-    .ls-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .ls-error { color: #c00; font-size: 0.82rem; width: 100%; margin-top: -8px; }
+    .ls-status { font-size: 0.82rem; color: #888; }
 
     /* Results */
     .ls-results-heading {

@@ -12,6 +12,8 @@ import { renderSummary } from './ui/summary.js';
 import { renderSidebarTracker } from './ui/sidebarTracker.js';
 import { renderMatchupLookup } from './ui/matchupLookup.js';
 import { initLeadSelectorTab } from './ui/leadSelector.js';
+import { loadChaosData } from './leadSelector/chaos.js';
+import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
 
 preloadStats();
 
@@ -227,19 +229,7 @@ function switchTab(id) {
 }
 
 // --- Lead Selector tab ---
-initLeadSelectorTab(
-  document.getElementById('tab-lead'),
-  () => {
-    const text = teamInput.value.trim();
-    if (!text) throw new Error('Paste your team in the team input above.');
-    return parseSets(text);
-  },
-  (matrix) => {
-    threatMatrix = matrix;
-    const filtered = analysisData ? filterByActive(analysisData, getState()) : null;
-    renderSummary(filtered, document.getElementById('tab-summary'), threatMatrix);
-  }
-);
+const leadSelector = initLeadSelectorTab(document.getElementById('tab-lead'));
 
 // --- Defender dropdown with arrow-key navigation ---
 const defenderSearch = document.getElementById('defender-search');
@@ -360,6 +350,17 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
     btn.textContent = 'ANALYZE MATCHUP';
     btn.disabled = false;
     return;
+  }
+
+  // ── Lead selector analysis (uses same team + opponents) ────────────────────
+  threatMatrix = null;
+  try {
+    const chaos   = await loadChaosData(leadSelector.getFormat());
+    const results = scoreLeadPairs(playerSets, selectedDefenders, chaos);
+    threatMatrix  = buildThreatMatrix(playerSets, selectedDefenders, chaos);
+    leadSelector.render(results.slice(0, 5), playerSets.length);
+  } catch (e) {
+    leadSelector.showMessage(`Lead analysis unavailable: ${e.message}`);
   }
 
   btn.textContent = 'ANALYZE MATCHUP';

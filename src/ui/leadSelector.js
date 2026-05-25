@@ -1,19 +1,18 @@
 /**
  * src/ui/leadSelector.js
  *
- * Lead Selector tab — fully self-contained UI component.
- * Owns its own opponent search, format selector, and result rendering.
+ * Lead Selector tab — displays lead pair recommendations computed by main.js.
+ * Owns only the format dropdown and result rendering. Inputs and triggering
+ * are handled by the top-level ANALYZE MATCHUP button in main.js.
  *
  * Usage:
- *   initLeadSelectorTab(container, getYourSets)
- *
- *   getYourSets — zero-arg callback that returns the current parsed player sets
- *                 (or throws if the textarea is empty / invalid)
+ *   const leadSelector = initLeadSelectorTab(container);
+ *   // later, after analysis:
+ *   leadSelector.render(results, teamSize);
+ *   leadSelector.showMessage('Some status text');
  */
 
-import { allSpecies, resolveSpeciesName } from '../calcEngine.js';
-import { loadChaosData, KNOWN_FORMATS }   from '../leadSelector/chaos.js';
-import { scoreLeadPairs, buildThreatMatrix } from '../leadSelector/score.js';
+import { KNOWN_FORMATS } from '../leadSelector/chaos.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,8 +36,8 @@ function scoreBar(label, value) {
   const fill  = el('div', 'ls-bar-fill');
   const num   = el('span', 'ls-sub-num', String(value));
 
-  fill.style.width            = `${Math.min(100, value)}%`;
-  fill.style.backgroundColor  = barColor(value);
+  fill.style.width           = `${Math.min(100, value)}%`;
+  fill.style.backgroundColor = barColor(value);
   track.appendChild(fill);
   row.append(lbl, track, num);
   return row;
@@ -48,21 +47,16 @@ function scoreBar(label, value) {
 
 /**
  * Initialize the Lead Selector tab.
- *
- * @param {HTMLElement} container   The #tab-lead panel element
- * @param {function}    getYourSets Returns parsed player sets on demand
+ * @param {HTMLElement} container  The #tab-lead panel element
+ * @returns {{ getFormat, render, showMessage }}
  */
-export function initLeadSelectorTab(container, getYourSets, onThreatMatrix = null) {
+export function initLeadSelectorTab(container) {
   container.innerHTML = '';
 
-  // ── Static structure ────────────────────────────────────────────────────────
-  const wrap      = el('div', 'ls-wrap');
-  const inputArea = el('div', 'ls-input-area');
-  const resultsEl = el('div', 'ls-results');
+  const wrap = el('div', 'ls-wrap');
   container.append(wrap);
-  wrap.append(inputArea, resultsEl);
 
-  // Format selector
+  // ── Format selector ─────────────────────────────────────────────────────────
   const fmtRow = el('div', 'ls-field');
   fmtRow.append(el('label', 'ls-label', 'Format'));
   const fmtSelect = el('select', 'ls-format-select');
@@ -73,171 +67,34 @@ export function initLeadSelectorTab(container, getYourSets, onThreatMatrix = nul
     fmtSelect.appendChild(o);
   });
   fmtRow.append(fmtSelect);
+  wrap.append(fmtRow);
 
-  // Opponent search
-  const searchRow   = el('div', 'ls-field ls-search-field');
-  const searchLabel = el('label', 'ls-label');
-  const countSpan   = el('span', 'ls-count', '0 / 6');
-  searchLabel.append(document.createTextNode('Opponent Team '), countSpan);
-  const searchWrap  = el('div', 'ls-search-wrapper');
-  const searchInput = el('input', 'ls-search');
-  searchInput.type        = 'text';
-  searchInput.placeholder = 'Search Pokémon…';
-  searchInput.autocomplete = 'off';
-  const dropdown    = el('div', 'ls-dropdown');
-  searchWrap.append(searchInput, dropdown);
-  const tagsEl      = el('div', 'ls-tags');
-  searchRow.append(searchLabel, searchWrap, tagsEl);
+  // ── Status / placeholder ────────────────────────────────────────────────────
+  const statusEl = el('div', 'ls-status', 'Run ANALYZE MATCHUP to generate lead recommendations.');
+  wrap.append(statusEl);
 
-  // Run button
-  const runBtn  = el('button', 'ls-btn', 'FIND BEST LEADS');
-  const errorEl = el('div', 'ls-error');
+  // ── Results area ────────────────────────────────────────────────────────────
+  const resultsEl = el('div', 'ls-results');
+  wrap.append(resultsEl);
 
-  inputArea.append(fmtRow, searchRow, runBtn, errorEl);
+  // ── Controller ──────────────────────────────────────────────────────────────
+  return {
+    /** Currently selected chaos format prefix. */
+    getFormat() { return fmtSelect.value; },
 
-  // ── Opponent search state ───────────────────────────────────────────────────
-  let opponents    = [];   // resolved names
-  let dropItems    = [];
-  let activeIdx    = -1;
+    /** Render lead pair results into the tab. */
+    render(results, teamSize) {
+      statusEl.style.display = 'none';
+      renderResults(resultsEl, results, teamSize);
+    },
 
-  function updateCount() {
-    countSpan.textContent = `${opponents.length} / 6`;
-    countSpan.style.color = opponents.length === 6 ? '#2a7a2a' : '#666';
-  }
-
-  function renderTags() {
-    tagsEl.innerHTML = '';
-    if (opponents.length > 0) {
-      const clr = el('button', 'clear-btn', 'Clear all');
-      clr.addEventListener('click', () => { opponents = []; renderTags(); updateCount(); });
-      tagsEl.append(clr);
-    }
-    opponents.forEach(name => {
-      const tag = el('div', 'defender-tag');
-      tag.innerHTML = `${name} <button title="Remove">×</button>`;
-      tag.querySelector('button').addEventListener('click', () => {
-        opponents = opponents.filter(n => n !== name);
-        renderTags();
-        updateCount();
-      });
-      tagsEl.append(tag);
-    });
-  }
-
-  function getMatches(query) {
-    return allSpecies.filter(n => n.toLowerCase().includes(query.toLowerCase())).slice(0, 50);
-  }
-
-  function renderDropdown(query) {
-    dropdown.innerHTML = '';
-    dropItems = [];
-    activeIdx = -1;
-    if (!query) { dropdown.classList.remove('open'); return; }
-    const matches = getMatches(query);
-    if (matches.length === 0) { dropdown.classList.remove('open'); return; }
-    matches.forEach(name => {
-      const item = el('div', 'dropdown-item', name);
-      item.addEventListener('mousedown', e => { e.preventDefault(); addOpponent(name); });
-      dropdown.appendChild(item);
-      dropItems.push(item);
-    });
-    dropdown.classList.add('open');
-  }
-
-  function setActive(idx) {
-    dropItems.forEach(i => i.classList.remove('dropdown-active'));
-    activeIdx = Math.max(0, Math.min(idx, dropItems.length - 1));
-    dropItems[activeIdx]?.classList.add('dropdown-active');
-    dropItems[activeIdx]?.scrollIntoView({ block: 'nearest' });
-  }
-
-  function addOpponent(name) {
-    if (opponents.length >= 6) return;
-    let resolved;
-    try { resolved = resolveSpeciesName(name); } catch { resolved = name; }
-    if (!opponents.includes(resolved)) {
-      opponents.push(resolved);
-      renderTags();
-      updateCount();
-    }
-    searchInput.value = '';
-    dropdown.classList.remove('open');
-    dropItems = [];
-    activeIdx = -1;
-  }
-
-  searchInput.addEventListener('input',  () => renderDropdown(searchInput.value));
-  searchInput.addEventListener('focus',  () => { if (searchInput.value) renderDropdown(searchInput.value); });
-  searchInput.addEventListener('blur',   () => setTimeout(() => dropdown.classList.remove('open'), 150));
-  searchInput.addEventListener('keydown', e => {
-    if (e.key === 'ArrowDown')  { e.preventDefault(); setActive(activeIdx < 0 ? 0 : activeIdx + 1); }
-    else if (e.key === 'ArrowUp')   { e.preventDefault(); setActive(activeIdx - 1); }
-    else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (activeIdx >= 0 && dropItems[activeIdx]) addOpponent(dropItems[activeIdx].textContent);
-      else { const m = getMatches(searchInput.value); if (m.length > 0) addOpponent(m[0]); }
-    }
-    else if (e.key === 'Escape') dropdown.classList.remove('open');
-  });
-
-  // ── Run button ──────────────────────────────────────────────────────────────
-  runBtn.addEventListener('click', async () => {
-    errorEl.textContent = '';
-
-    // Validate inputs
-    let yourSets;
-    try {
-      yourSets = getYourSets();
-    } catch (e) {
-      errorEl.textContent = `Team error: ${e.message}`;
-      return;
-    }
-    if (!yourSets || yourSets.length < 2) {
-      errorEl.textContent = 'Paste your team above and click ANALYZE MATCHUP first, or just paste the team — no analysis needed.';
-      return;
-    }
-    if (opponents.length < 2) {
-      errorEl.textContent = 'Add at least 2 opponent Pokémon.';
-      return;
-    }
-    if (opponents.length > 6) {
-      errorEl.textContent = 'Maximum 6 opponent Pokémon.';
-      return;
-    }
-
-    runBtn.textContent = 'ANALYZING…';
-    runBtn.disabled    = true;
-    resultsEl.innerHTML = '';
-
-    let chaosData;
-    try {
-      chaosData = await loadChaosData(fmtSelect.value);
-    } catch (e) {
-      errorEl.textContent = `Could not load format data: ${e.message}`;
-      runBtn.textContent = 'FIND BEST LEADS';
-      runBtn.disabled    = false;
-      return;
-    }
-
-    let results, threatMatrix;
-    try {
-      results      = scoreLeadPairs(yourSets, opponents, chaosData);
-      threatMatrix = buildThreatMatrix(yourSets, opponents, chaosData);
-    } catch (e) {
-      errorEl.textContent = `Scoring error: ${e.message}`;
-      runBtn.textContent = 'FIND BEST LEADS';
-      runBtn.disabled    = false;
-      return;
-    }
-
-    runBtn.textContent = 'FIND BEST LEADS';
-    runBtn.disabled    = false;
-
-    // Push threat matrix to the Summary tab via callback
-    onThreatMatrix?.(threatMatrix);
-
-    renderResults(resultsEl, results.slice(0, 5), yourSets.length);
-  });
+    /** Show a status / error message and clear results. */
+    showMessage(msg) {
+      statusEl.textContent   = msg;
+      statusEl.style.display = '';
+      resultsEl.innerHTML    = '';
+    },
+  };
 }
 
 // ── Result rendering ──────────────────────────────────────────────────────────
@@ -257,17 +114,16 @@ function renderResults(container, results, teamSize) {
   container.append(grid);
 
   results.forEach((result, i) => {
-    const card = buildCard(result, i + 1, teamSize);
-    grid.append(card);
+    grid.append(buildCard(result, i + 1, teamSize));
   });
 }
 
-// ── Lead pair card rendering ──────────────────────────────────────────────────
+// ── Lead pair card ────────────────────────────────────────────────────────────
 
 function buildCard(result, rank, teamSize) {
   const card = el('div', 'ls-card');
 
-  // ── Header row: rank badge + names + score chip ──────────────────────────
+  // Header: rank badge + names + score chip
   const header = el('div', 'ls-card-header');
   const badge  = el('span', 'ls-rank', String(rank));
   const names  = el('span', 'ls-names', `${result.monA} + ${result.monB}`);
@@ -276,7 +132,7 @@ function buildCard(result, rank, teamSize) {
   header.append(badge, names, chip);
   card.append(header);
 
-  // ── Score bars ───────────────────────────────────────────────────────────
+  // Score bars
   const bars = el('div', 'ls-bars');
   bars.append(
     scoreBar('Offense', result.offNorm),
@@ -285,7 +141,7 @@ function buildCard(result, rank, teamSize) {
   );
   card.append(bars);
 
-  // ── Threat / warning rows ────────────────────────────────────────────────
+  // Details
   const details = el('div', 'ls-details');
 
   if (result.threats.length > 0) {
@@ -300,7 +156,6 @@ function buildCard(result, rank, teamSize) {
     details.append(row);
   }
 
-  // ── Back pair ────────────────────────────────────────────────────────────
   if (result.backPair && teamSize >= 4) {
     const row = el('div', 'ls-detail-row ls-back-row');
     const coversText = result.backPair.covers.length > 0
