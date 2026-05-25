@@ -24,7 +24,7 @@ const _cache = new Map();
  */
 export async function loadChaosData(prefix) {
   if (_cache.has(prefix)) return _cache.get(prefix);
-  const res = await fetch(`/data/chaos/${prefix}.json`);
+  const res = await fetch(`${import.meta.env.BASE_URL}data/chaos/${prefix}.json`);
   if (!res.ok) throw new Error(`Chaos data not found for prefix "${prefix}"`);
   const data = await res.json();
   _cache.set(prefix, data);
