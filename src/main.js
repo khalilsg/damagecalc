@@ -11,6 +11,7 @@ import { renderSpeedLadder } from './ui/speedLadder.js';
 import { renderSummary } from './ui/summary.js';
 import { renderSidebarTracker } from './ui/sidebarTracker.js';
 import { renderMatchupLookup } from './ui/matchupLookup.js';
+import { initLeadSelectorTab } from './ui/leadSelector.js';
 
 preloadStats();
 
@@ -223,6 +224,16 @@ function switchTab(id) {
   document.querySelector(`[data-tab="${id}"]`).classList.add('active');
   document.getElementById(id).classList.add('active');
 }
+
+// --- Lead Selector tab ---
+initLeadSelectorTab(
+  document.getElementById('tab-lead'),
+  () => {
+    const text = teamInput.value.trim();
+    if (!text) throw new Error('Paste your team in the team input above.');
+    return parseSets(text);
+  }
+);
 
 // --- Defender dropdown with arrow-key navigation ---
 const defenderSearch = document.getElementById('defender-search');
