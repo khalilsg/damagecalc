@@ -83,7 +83,8 @@
       padding: 6px 10px;
       border-radius: 5px;
       cursor: pointer;
-      flex-shrink: 0;
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     #team-select:focus { outline: none; border-color: #555; }
@@ -354,16 +355,20 @@
     .tm-chip        { background: #f2f2f2; color: #555; }
     .tm-no-threats  { font-size: 0.75rem; color: #bbb; font-style: italic; }
 
-    .tm-answers      { display: flex; flex-direction: column; gap: 4px; }
-    .tm-answer-row   { display: flex; align-items: center; gap: 6px; }
-    .tm-answer-mon   { font-size: 0.71rem; color: #444; flex: 0 0 130px;
-                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .tm-answer-move  { font-size: 0.69rem; color: #666; flex: 0 0 88px;
-                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tm-answers      { display: flex; flex-direction: column; gap: 5px; }
+    .tm-answer-row   { display: flex; flex-direction: column; gap: 2px; }
+    .tm-answer-top   { display: flex; align-items: baseline; gap: 6px; }
+    .tm-answer-bot   { display: flex; align-items: center; gap: 6px; }
+    .tm-answer-mon   { font-size: 0.71rem; color: #444; font-weight: 600;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                       max-width: 50%; }
+    .tm-answer-move  { font-size: 0.69rem; color: #666;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                       min-width: 0; flex: 1; }
     .tm-no-move      { color: #bbb; }
     .tm-answer-track { flex: 1; background: #eee; border-radius: 3px; height: 6px; }
-    .tm-answer-pct   { font-size: 0.69rem; color: #666; min-width: 56px;
-                       text-align: right; flex-shrink: 0; }
+    .tm-answer-pct   { font-size: 0.69rem; color: #666; white-space: nowrap;
+                       flex-shrink: 0; }
 
     /* ---- Output cards ---- */
     .player-section { margin-bottom: 28px; }
@@ -382,6 +387,13 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
+    }
+
+    /* Threat cards use a grid so each card has enough room for 2-line rows */
+    .threat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
     }
 
     .matchup-card {

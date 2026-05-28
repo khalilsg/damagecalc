@@ -109,29 +109,32 @@ function buildThreatCard(entry) {
   for (const { mon, move, pct, minPct } of entry.answers) {
     const row = el('div', 'tm-answer-row');
 
+    // Line 1: mon name + move name
+    const top = el('div', 'tm-answer-top');
     const monSpan = el('span', 'tm-answer-mon');
     monSpan.textContent = mon;
-    row.appendChild(monSpan);
+    top.appendChild(monSpan);
+    const mSpan = el('span', move ? 'tm-answer-move' : 'tm-answer-move tm-no-move');
+    mSpan.textContent = move ?? '—';
+    top.appendChild(mSpan);
+    row.appendChild(top);
 
-    if (!move) {
-      const mSpan = el('span', 'tm-answer-move tm-no-move');
-      mSpan.textContent = '—';
-      row.appendChild(mSpan);
-      row.appendChild(el('div', 'tm-answer-track'));
-      const pSpan = el('span', 'tm-answer-pct');
-      pSpan.textContent = '—';
-      row.appendChild(pSpan);
-    } else {
-      const mSpan = el('span', 'tm-answer-move');
-      mSpan.textContent = move;
-      row.appendChild(mSpan);
+    // Line 2: damage bar + percentage range
+    const bot = el('div', 'tm-answer-bot');
+    if (move) {
       const track = el('div', 'tm-answer-track');
       applyRangeBar(track, minPct, pct);
-      row.appendChild(track);
+      bot.appendChild(track);
       const pSpan = el('span', 'tm-answer-pct');
       pSpan.textContent = pctRange(minPct, pct);
-      row.appendChild(pSpan);
+      bot.appendChild(pSpan);
+    } else {
+      const pSpan = el('span', 'tm-answer-pct');
+      pSpan.textContent = '—';
+      bot.appendChild(pSpan);
     }
+    row.appendChild(bot);
+
     answers.appendChild(row);
   }
   card.appendChild(answers);
@@ -148,7 +151,7 @@ export function renderSummary(analysisData, container, threatMatrix = null) {
     const hdr     = el('div', 'section-header');
     hdr.textContent = 'Opponent Sets & Threats';
     section.appendChild(hdr);
-    const cards = el('div', 'matchup-cards');
+    const cards = el('div', 'matchup-cards threat-cards');
     for (const entry of threatMatrix) cards.appendChild(buildThreatCard(entry));
     section.appendChild(cards);
     container.appendChild(section);
