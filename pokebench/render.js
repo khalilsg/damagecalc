@@ -84,7 +84,7 @@ function fmtSpeed(tag) {
   return yellow('Mixed');
 }
 
-function fmtUsage(pct) { return gray(`${pct.toFixed(1)}%`); }
+function fmtUsage(pct) { return gray(`${(pct * 100).toFixed(1)}%`); }
 
 // ── Public renderers ──────────────────────────────────────────────────────────
 

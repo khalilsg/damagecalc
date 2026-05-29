@@ -128,7 +128,7 @@ function renderOffense(results, container) {
 
     const hdr = el('div', 'pb-opp-header');
     const nameSpan = el('span', 'pb-opp-name', opponentName);
-    const usageSpan = el('span', 'pb-usage', `${usagePct.toFixed(1)}% usage`);
+    const usageSpan = el('span', 'pb-usage', `${(usagePct * 100).toFixed(1)}% usage`);
     const spdSpan = el('span', `pb-speed-tag ${speedClass(speedTag)}`, speedTag);
     hdr.append(nameSpan, usageSpan, spdSpan);
     section.append(hdr);
@@ -180,7 +180,7 @@ function renderDefense(results, container) {
     const hdr = el('div', 'pb-opp-header');
     hdr.append(
       el('span', 'pb-opp-name', opponentName),
-      el('span', 'pb-usage', `${usagePct.toFixed(1)}% usage`),
+      el('span', 'pb-usage', `${(usagePct * 100).toFixed(1)}% usage`),
     );
     section.append(hdr);
 
@@ -230,7 +230,7 @@ function renderSpeed(results, container) {
     const oppRange = minOppSpd === maxOppSpd ? String(minOppSpd) : `${minOppSpd}–${maxOppSpd}`;
     tr.innerHTML = `
       <td class="pb-opp-name">${opponentName}</td>
-      <td class="pb-usage">${usagePct.toFixed(1)}%</td>
+      <td class="pb-usage">${(usagePct * 100).toFixed(1)}%</td>
       <td><span class="pb-speed-tag ${speedClass(result)}">${result}</span></td>
       <td class="pb-speed-num">${userSpeed}</td>
       <td class="pb-speed-num">${oppRange}</td>
