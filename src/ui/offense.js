@@ -32,11 +32,14 @@ function pctRange(minPct, maxPct) {
 
 // ── Archetype label shortening ────────────────────────────────────────────────
 
-const ARCH_SHORT = {
-  'Max SpDef':   'Max SpD',
-  'Max Def':     'Max Def',
-  'Min Defense': 'Min Def',
-};
+// 'Min Defense' means min-SpDef when paired with 'Max SpDef' (special move),
+// or min-Def when paired with 'Max Def' (physical move).
+function archLabel(archetype, siblingNames) {
+  if (archetype === 'Max SpDef')   return 'Max SpD';
+  if (archetype === 'Max Def')     return 'Max Def';
+  if (archetype === 'Min Defense') return siblingNames.includes('Max SpDef') ? 'Min SpD' : 'Min Def';
+  return archetype;
+}
 
 // ── Classification merging (highest priority wins) ────────────────────────────
 
@@ -96,12 +99,14 @@ function buildMoveBlock(moveName, archs) {
   nameRow.appendChild(nameSpan);
   block.appendChild(nameRow);
 
+  const siblingNames = archs.map(a => a.archetype);
+
   // One bar row per archetype
   for (const { archetype, classification, minPct, maxPct } of archs) {
     const archRow = el('div', 'mv-arch-row');
 
     const lbl = el('span', 'mv-arch-label');
-    lbl.textContent = ARCH_SHORT[archetype] ?? archetype;
+    lbl.textContent = archLabel(archetype, siblingNames);
     archRow.appendChild(lbl);
 
     const track = el('div', 'mv-track');
