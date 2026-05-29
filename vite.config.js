@@ -10,8 +10,9 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'index.html'),
-        demo: resolve(__dirname, 'demo/index.html'),
+        main:      resolve(__dirname, 'index.html'),
+        demo:      resolve(__dirname, 'demo/index.html'),
+        pokebench: resolve(__dirname, 'pokebench/index.html'),
       },
     },
   },

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéBench — Champions Damage Calculator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #f0f0f0;
+      color: #1a1a1a;
+      padding: 24px 32px 64px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 28px;
+    }
+
+    .subtitle a { color: #888; }
+
+    /* ── Form ─────────────────────────────────────────────────────────────── */
+
+    .pb-form {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+
+    .pb-form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .pb-form-row:last-child { margin-bottom: 0; }
+
+    .pb-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .pb-field.field-mon   { flex: 2 1 200px; }
+    .pb-field.field-nat   { flex: 1 1 130px; }
+    .pb-field.field-item  { flex: 1 1 140px; }
+    .pb-field.field-fmt   { flex: 1 1 180px; }
+    .pb-field.field-topn  { flex: 0 0 80px; }
+    .pb-field.field-boosts{ flex: 1 1 200px; }
+    .pb-field.field-evs   { flex: 1 0 100%; }
+    .pb-field.field-moves { flex: 1 0 100%; }
+
+    .pb-field label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pb-field input,
+    .pb-field select {
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #1a1a1a;
+      font-family: inherit;
+      font-size: 0.875rem;
+      padding: 7px 10px;
+      border-radius: 5px;
+      outline: none;
+      width: 100%;
+    }
+
+    .pb-field input:focus,
+    .pb-field select:focus { border-color: #555; }
+
+    /* Mon autocomplete */
+    .pb-mon-wrap { position: relative; }
+
+    #mon-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    #mon-dropdown.open { display: block; }
+
+    .pb-dropdown-item {
+      padding: 6px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .pb-dropdown-item:hover,
+    .pb-dropdown-active { background: #f0f0f0; }
+
+    /* EVs */
+    .pb-ev-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pb-ev-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .pb-ev-group label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .pb-ev-group input {
+      width: 52px;
+      text-align: center;
+      font-size: 0.85rem;
+      padding: 5px 6px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      color: #1a1a1a;
+    }
+
+    .pb-ev-group input:focus { outline: none; border-color: #555; }
+
+    /* Moves */
+    .pb-moves-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pb-move-input {
+      flex: 1 1 160px;
+      font-size: 0.85rem;
+      padding: 7px 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fff;
+      color: #1a1a1a;
+      font-family: inherit;
+    }
+    .pb-move-input:focus { outline: none; border-color: #555; }
+
+    /* Benchmark button */
+    #bench-btn {
+      display: block;
+      background: #111;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 32px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    #bench-btn:hover    { background: #333; }
+    #bench-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .pb-error {
+      color: #c0392b;
+      font-size: 0.82rem;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* ── Results ──────────────────────────────────────────────────────────── */
+
+    #results-area { display: none; }
+
+    #resolved-info {
+      font-size: 0.78rem;
+      color: #555;
+      background: #f8f8f8;
+      border: 1px solid #e0e0e0;
+      border-radius: 5px;
+      padding: 7px 12px;
+      margin-bottom: 14px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .pb-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .pb-tab-btn {
+      background: #fff;
+      border: 1px solid #ccc;
+      color: #555;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 6px 18px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .pb-tab-btn:hover  { border-color: #888; color: #222; }
+    .pb-tab-btn.active { background: #111; color: #fff; border-color: #111; }
+
+    .pb-tab-panel { display: none; }
+    .pb-tab-panel.active { display: block; }
+
+    /* ── Per-opponent section ─────────────────────────────────────────────── */
+
+    .pb-result-section {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+
+    .pb-opp-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .pb-opp-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #111;
+    }
+
+    .pb-usage {
+      font-size: 0.72rem;
+      color: #999;
+    }
+
+    /* Speed tag */
+    .pb-speed-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .tag-faster { background: #d4edda; color: #155724; }
+    .tag-slower { background: #f8d7da; color: #721c24; }
+    .tag-mixed  { background: #fff3cd; color: #856404; }
+
+    /* Move rows */
+    .pb-move-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pb-move-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pb-move-name {
+      font-size: 0.8rem;
+      color: #333;
+      flex: 0 0 160px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pb-bar-wrap {
+      flex: 1;
+      min-width: 60px;
+    }
+
+    .pb-bar {
+      height: 7px;
+      border-radius: 3px;
+      background: #eee;
+    }
+
+    .pb-dmg-range {
+      font-size: 0.75rem;
+      font-weight: 600;
+      flex: 0 0 90px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .ko-guaranteed { color: #c0392b; }
+    .ko-chance     { color: #e67e22; }
+    .dmg-warn      { color: #b07000; }
+    .dmg-low       { color: #555; }
+
+    /* KO / survive tags */
+    .pb-ko-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .tag-ohko       { background: #f8d7da; color: #721c24; }
+    .tag-ohko-chance{ background: #fde8d1; color: #7d3a00; }
+    .tag-2hko       { background: #d1ecf1; color: #0c5460; }
+    .tag-2hko-chance{ background: #fff3cd; color: #856404; }
+    .tag-survive    { background: #d4edda; color: #155724; }
+
+    /* ── Speed table ──────────────────────────────────────────────────────── */
+
+    .pb-speed-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .pb-speed-table th {
+      background: #f5f5f5;
+      color: #555;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .pb-speed-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+
+    .pb-speed-table tr:last-child td { border-bottom: none; }
+    .pb-speed-table tr:hover td { background: #fafafa; }
+
+    .pb-speed-num {
+      font-variant-numeric: tabular-nums;
+      color: #444;
+    }
+
+    /* ── Empty state ──────────────────────────────────────────────────────── */
+
+    .pb-empty {
+      color: #aaa;
+      font-size: 0.85rem;
+      font-style: italic;
+      padding: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>PokéBench</h1>
+  <p class="subtitle">
+    Benchmark a Pokémon against the Champions metagame
+    &nbsp;·&nbsp;
+    <a href="../">Back to K Calc</a>
+  </p>
+
+  <div class="pb-form">
+    <form id="bench-form">
+      <!-- Row 1: Mon / Nature / Item / Format / Top N -->
+      <div class="pb-form-row">
+        <div class="pb-field field-mon">
+          <label>Pokémon</label>
+          <div class="pb-mon-wrap">
+            <input id="mon-search" placeholder="e.g. Dragapult" autocomplete="off" />
+            <div id="mon-dropdown"></div>
+          </div>
+        </div>
+        <div class="pb-field field-nat">
+          <label>Nature</label>
+          <select id="nature-select">
+            <option>Hardy</option><option>Lonely</option><option>Brave</option>
+            <option>Adamant</option><option>Naughty</option><option>Bold</option>
+            <option>Docile</option><option>Relaxed</option><option>Impish</option>
+            <option>Lax</option><option selected>Timid</option><option>Hasty</option>
+            <option>Serious</option><option>Jolly</option><option>Naive</option>
+            <option>Modest</option><option>Mild</option><option>Quiet</option>
+            <option>Bashful</option><option>Rash</option><option>Calm</option>
+            <option>Gentle</option><option>Sassy</option><option>Careful</option>
+            <option>Quirky</option>
+          </select>
+        </div>
+        <div class="pb-field field-item">
+          <label>Item <span style="font-weight:400;text-transform:none;color:#aaa">(optional)</span></label>
+          <input id="item-input" placeholder="e.g. Life Orb" />
+        </div>
+        <div class="pb-field field-fmt">
+          <label>Format</label>
+          <select id="format-select"></select>
+        </div>
+        <div class="pb-field field-topn">
+          <label>Top N</label>
+          <input id="top-n" type="number" value="20" min="1" max="50" />
+        </div>
+      </div>
+
+      <!-- Row 2: EVs -->
+      <div class="pb-form-row">
+        <div class="pb-field field-evs">
+          <label>EVs <span style="font-weight:400;text-transform:none;color:#aaa">(Champions format — max 32 per stat)</span></label>
+          <div class="pb-ev-row">
+            <div class="pb-ev-group"><label>HP</label><input  id="ev-hp"  class="pb-ev-input" type="number" value="0" min="0" max="32" /></div>
+            <div class="pb-ev-group"><label>Atk</label><input id="ev-atk" class="pb-ev-input" type="number" value="0" min="0" max="32" /></div>
+            <div class="pb-ev-group"><label>Def</label><input id="ev-def" class="pb-ev-input" type="number" value="0" min="0" max="32" /></div>
+            <div class="pb-ev-group"><label>SpA</label><input id="ev-spa" class="pb-ev-input" type="number" value="0" min="0" max="32" /></div>
+            <div class="pb-ev-group"><label>SpD</label><input id="ev-spd" class="pb-ev-input" type="number" value="0" min="0" max="32" /></div>
+            <div class="pb-ev-group"><label>Spe</label><input id="ev-spe" class="pb-ev-input" type="number" value="0" min="0" max="32" /></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Moves -->
+      <div class="pb-form-row">
+        <div class="pb-field field-moves">
+          <label>Moves <span style="font-weight:400;text-transform:none;color:#aaa">(optional — defaults to top meta moves for this Pokémon)</span></label>
+          <div class="pb-moves-row">
+            <input class="pb-move-input" placeholder="Move 1" />
+            <input class="pb-move-input" placeholder="Move 2" />
+            <input class="pb-move-input" placeholder="Move 3" />
+            <input class="pb-move-input" placeholder="Move 4" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 4: Boosts -->
+      <div class="pb-form-row">
+        <div class="pb-field field-boosts">
+          <label>Boosts <span style="font-weight:400;text-transform:none;color:#aaa">(optional, e.g. +2 SpA, -1 Def)</span></label>
+          <input id="boosts-input" placeholder="+2 SpA, -1 Def" />
+        </div>
+      </div>
+
+      <button type="button" id="bench-btn">BENCHMARK</button>
+    </form>
+    <div id="error" class="pb-error"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-area">
+    <div id="resolved-info"></div>
+
+    <div class="pb-tabs">
+      <button class="pb-tab-btn active" data-tab="tab-offense">Offensive</button>
+      <button class="pb-tab-btn"        data-tab="tab-defense">Defensive</button>
+      <button class="pb-tab-btn"        data-tab="tab-speed">Speed Audit</button>
+    </div>
+
+    <div id="tab-offense" class="pb-tab-panel active"></div>
+    <div id="tab-defense" class="pb-tab-panel"></div>
+    <div id="tab-speed"   class="pb-tab-panel"></div>
+  </div>
+
+  <script type="module" src="../src/pokebench.js"></script>
+</body>
+</html>
