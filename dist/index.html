@@ -58,6 +58,8 @@
       min-width: 280px;
     }
 
+    .input-group-narrow { flex: 0 1 auto; min-width: unset; }
+
     label {
       font-size: 0.75rem;
       font-weight: 600;
@@ -81,7 +83,8 @@
       padding: 6px 10px;
       border-radius: 5px;
       cursor: pointer;
-      flex-shrink: 0;
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     #team-select:focus { outline: none; border-color: #555; }
@@ -263,13 +266,10 @@
 
     /* ---- Lead Selector tab ---- */
     .ls-wrap        { display: flex; flex-direction: column; gap: 20px; }
-    .ls-input-area  { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
 
     .ls-field       { display: flex; flex-direction: column; gap: 5px; }
     .ls-label       { font-size: 0.75rem; font-weight: 600; color: #444;
                       text-transform: uppercase; letter-spacing: 0.5px; }
-    .ls-count       { font-weight: 400; color: #666; text-transform: none; letter-spacing: 0; }
-    .ls-search-field { flex: 1; min-width: 260px; }
 
     .ls-format-select {
       background: #fff; border: 1px solid #ccc; color: #333;
@@ -278,38 +278,7 @@
     }
     .ls-format-select:focus { outline: none; border-color: #555; }
 
-    .ls-search-wrapper { position: relative; }
-    .ls-search {
-      background: #fff; border: 1px solid #ccc; color: #1a1a1a;
-      font-family: inherit; font-size: 0.85rem; padding: 7px 10px;
-      border-radius: 5px; width: 100%; outline: none;
-    }
-    .ls-search:focus { border-color: #555; }
-
-    .ls-dropdown {
-      display: none; position: absolute; top: 100%; left: 0; right: 0;
-      background: #fff; border: 1px solid #ccc; border-top: none;
-      border-radius: 0 0 5px 5px; max-height: 200px; overflow-y: auto;
-      z-index: 100; box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    }
-    .ls-dropdown.open { display: block; }
-
-    .ls-tags {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      margin-top: 6px; min-height: 28px;
-    }
-
-    .ls-btn {
-      background: #222; border: none; color: #fff;
-      font-family: inherit; font-size: 0.85rem; font-weight: 600;
-      padding: 8px 20px; border-radius: 5px; cursor: pointer;
-      letter-spacing: 0.5px; white-space: nowrap; align-self: flex-end;
-      transition: background 0.15s;
-    }
-    .ls-btn:hover:not(:disabled) { background: #444; }
-    .ls-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .ls-error { color: #c00; font-size: 0.82rem; width: 100%; margin-top: -8px; }
+    .ls-status { font-size: 0.82rem; color: #888; }
 
     /* Results */
     .ls-results-heading {
@@ -362,6 +331,45 @@
     .ls-back-row    { color: #1a1a1a; }
     .ls-covers      { color: #555; font-style: italic; }
 
+    /* ── Threat Matrix (card content — outer card uses .matchup-card) ──── */
+    .tm-set-info    { font-size: 0.72rem; color: #888; }
+    .tm-no-data     { font-size: 0.75rem; color: #aaa; font-style: italic; }
+
+    .tm-moves-row   { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tm-move-chip   { font-size: 0.68rem; background: #eef; border: 1px solid #cce;
+                      border-radius: 3px; padding: 2px 6px; color: #335; }
+    .tm-move-chip.tm-skip { background: #f5f5f5; border-color: #e0e0e0; color: #aaa; }
+
+    .tm-section-head { font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+                       letter-spacing: 0.05em; color: #777; border-top: 1px solid #eee;
+                       padding-top: 6px; margin-top: 2px; }
+
+    .tm-threats     { display: flex; flex-direction: column; gap: 5px; }
+    .tm-threat-row  { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .tm-threat-move { font-size: 0.75rem; font-weight: 600; color: #222;
+                      min-width: 100px; flex-shrink: 0; }
+    .tm-targets     { display: flex; flex-wrap: wrap; gap: 4px; }
+    .tm-target      { font-size: 0.7rem; padding: 1px 5px; border-radius: 3px; }
+    .tm-ohko        { background: #fde8e8; color: #900; font-weight: 600; }
+    .tm-warn        { background: #fef0d0; color: #7a4000; }
+    .tm-chip        { background: #f2f2f2; color: #555; }
+    .tm-no-threats  { font-size: 0.75rem; color: #bbb; font-style: italic; }
+
+    .tm-answers      { display: flex; flex-direction: column; gap: 5px; }
+    .tm-answer-row   { display: flex; flex-direction: column; gap: 2px; }
+    .tm-answer-top   { display: flex; align-items: baseline; gap: 6px; }
+    .tm-answer-bot   { display: flex; align-items: center; gap: 6px; }
+    .tm-answer-mon   { font-size: 0.71rem; color: #444; font-weight: 600;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                       max-width: 50%; }
+    .tm-answer-move  { font-size: 0.69rem; color: #666;
+                       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                       min-width: 0; flex: 1; }
+    .tm-no-move      { color: #bbb; }
+    .tm-answer-track { flex: 1; background: #eee; border-radius: 3px; height: 6px; }
+    .tm-answer-pct   { font-size: 0.69rem; color: #666; white-space: nowrap;
+                       flex-shrink: 0; }
+
     /* ---- Output cards ---- */
     .player-section { margin-bottom: 28px; }
 
@@ -379,6 +387,13 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
+    }
+
+    /* Threat cards use a grid so each card has enough room for 2-line rows */
+    .threat-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 12px;
     }
 
     .matchup-card {
@@ -419,6 +434,84 @@
     .ko-guaranteed { color: #c00; font-weight: 700; }
     .ko-chance     { color: #d6600a; font-weight: 700; }
     .ko-2hko       { color: #8a6900; font-weight: 600; }
+
+    /* ── Visual move rows (offense / defense redesign) ── */
+    .mv-visual-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 5px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .mv-visual-row:last-child { border-bottom: none; }
+
+    .mv-visual-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .mv-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #222;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mv-ko-tag {
+      font-size: 0.63rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* Offense KO tags (good outcomes) */
+    .mv-ko-ohko   { background: #e6ffe6; color: #2a7a2a; border: 1px solid #b2dcb2; }
+    .mv-ko-chance { background: #fff0e6; color: #c05000; border: 1px solid #f0c090; }
+    .mv-ko-2hko   { background: #fffbe6; color: #8a6900; border: 1px solid #e8d88a; }
+    /* Defense outcome tags (threat scale) */
+    .mv-def-danger { background: #ffe6e6; color: #c00;    border: 1px solid #f0b0b0; }
+    .mv-def-warn   { background: #fff0e6; color: #c05000; border: 1px solid #f0c090; }
+    .mv-def-2hko   { background: #fffbe6; color: #8a6900; border: 1px solid #e8d88a; }
+    .mv-def-ok     { background: #e6ffe6; color: #2a7a2a; border: 1px solid #b2dcb2; }
+
+    .mv-visual-bot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mv-track {
+      flex: 1;
+      height: 6px;
+      background: #eee;
+      border-radius: 3px;
+      min-width: 0;
+    }
+
+    .mv-pct {
+      font-size: 0.69rem;
+      color: #666;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* LIVE tracked move rows in defense */
+    .mv-live-row {
+      background: #fff8e1;
+      border-left: 3px solid #e6a800;
+      padding-left: 6px;
+      border-radius: 2px;
+      margin: 2px 0;
+    }
 
     /* Live-tracked move highlighting */
     .in-battle-row {
@@ -843,8 +936,9 @@
     .my-stage  { background: #e8f0fe; color: #1a73e8; border: 1px solid #c5d8fb; }
     .opp-stage { background: #fce8e6; color: #d93025; border: 1px solid #f5c5c2; }
   </style>
-  <script type="module" crossorigin src="/damagecalc/assets/main-BDmxtycj.js"></script>
-  <link rel="modulepreload" crossorigin href="/damagecalc/assets/matchupLookup-CKFy2xj2.js">
+  <script type="module" crossorigin src="/damagecalc/assets/main-BGMky6Gq.js"></script>
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/chaos-DFE1WZAB.js">
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/leadSelector-Dj481NLM.js">
 </head>
 <body>
   <h1>K CALC</h1>
@@ -873,6 +967,10 @@ Boost tags on the first line: [+2 SpA] [+1 Spe]"></textarea>
             <div id="dropdown"></div>
           </div>
           <div class="selected-defenders" id="selected-defenders"></div>
+        </div>
+        <div class="input-group input-group-narrow">
+          <label>Format</label>
+          <select id="format-select" class="ls-format-select"></select>
         </div>
       </div>
 

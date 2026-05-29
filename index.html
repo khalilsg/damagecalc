@@ -435,6 +435,84 @@
     .ko-chance     { color: #d6600a; font-weight: 700; }
     .ko-2hko       { color: #8a6900; font-weight: 600; }
 
+    /* ── Visual move rows (offense / defense redesign) ── */
+    .mv-visual-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 5px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .mv-visual-row:last-child { border-bottom: none; }
+
+    .mv-visual-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .mv-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #222;
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mv-ko-tag {
+      font-size: 0.63rem;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    /* Offense KO tags (good outcomes) */
+    .mv-ko-ohko   { background: #e6ffe6; color: #2a7a2a; border: 1px solid #b2dcb2; }
+    .mv-ko-chance { background: #fff0e6; color: #c05000; border: 1px solid #f0c090; }
+    .mv-ko-2hko   { background: #fffbe6; color: #8a6900; border: 1px solid #e8d88a; }
+    /* Defense outcome tags (threat scale) */
+    .mv-def-danger { background: #ffe6e6; color: #c00;    border: 1px solid #f0b0b0; }
+    .mv-def-warn   { background: #fff0e6; color: #c05000; border: 1px solid #f0c090; }
+    .mv-def-2hko   { background: #fffbe6; color: #8a6900; border: 1px solid #e8d88a; }
+    .mv-def-ok     { background: #e6ffe6; color: #2a7a2a; border: 1px solid #b2dcb2; }
+
+    .mv-visual-bot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mv-track {
+      flex: 1;
+      height: 6px;
+      background: #eee;
+      border-radius: 3px;
+      min-width: 0;
+    }
+
+    .mv-pct {
+      font-size: 0.69rem;
+      color: #666;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* LIVE tracked move rows in defense */
+    .mv-live-row {
+      background: #fff8e1;
+      border-left: 3px solid #e6a800;
+      padding-left: 6px;
+      border-radius: 2px;
+      margin: 2px 0;
+    }
+
     /* Live-tracked move highlighting */
     .in-battle-row {
       background: #fff8e1;

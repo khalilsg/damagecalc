@@ -201,12 +201,18 @@ function calcResult(attacker, defender, moveName, field) {
     if (desc.includes('No damage')) return null;
     const kochance = result.kochance().text ?? '';
     const parts = desc.split(' -- ');
+    const maxHp  = result.defender.maxHP();
+    const rolls  = result.damage;
+    const minDmg = Array.isArray(rolls) && rolls.length ? rolls[0]                : 0;
+    const maxDmg = Array.isArray(rolls) && rolls.length ? rolls[rolls.length - 1] : 0;
     return {
       move: moveName,
       formattedDesc: parts[1] ? `${parts[0]} -- ${parts[1]}` : parts[0],
       formattedBase: parts[0],
       kochanceText: parts[1] ?? kochance,
       classification: classifyKO(kochance),
+      minPct: maxHp > 0 ? (minDmg / maxHp) * 100 : 0,
+      maxPct: maxHp > 0 ? (maxDmg / maxHp) * 100 : 0,
     };
   } catch {
     return null;
