@@ -435,3 +435,23 @@ document.getElementById('bench-form').addEventListener('keydown', e => {
     runBenchmark();
   }
 });
+
+// ── Demo auto-run ─────────────────────────────────────────────────────────────
+
+if (new URLSearchParams(location.search).has('demo')) {
+  const DEMO = {
+    mon:    'Floette-Mega',
+    nature: 'Timid',
+    evs:    { hp: 2, spa: 32, spe: 32 },
+    moves:  ['Dazzling Gleam', 'Moonblast', 'Light of Ruin', 'Psychic'],
+  };
+  document.getElementById('mon-search').value     = DEMO.mon;
+  document.getElementById('nature-select').value  = DEMO.nature;
+  for (const [stat, val] of Object.entries(DEMO.evs)) {
+    document.getElementById(`ev-${stat}`).value = val;
+  }
+  document.querySelectorAll('.pb-move-input').forEach((inp, i) => {
+    inp.value = DEMO.moves[i] ?? '';
+  });
+  runBenchmark();
+}
