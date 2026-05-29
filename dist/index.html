@@ -445,11 +445,12 @@
     }
     .mv-visual-row:last-child { border-bottom: none; }
 
-    .mv-visual-top {
+    /* Move name header row */
+    .mv-name-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 6px;
+      gap: 5px;
+      margin-bottom: 2px;
     }
 
     .mv-name {
@@ -461,6 +462,35 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    /* One bar row per archetype */
+    .mv-arch-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mv-arch-label {
+      font-size: 0.61rem;
+      color: #999;
+      white-space: nowrap;
+      flex-shrink: 0;
+      width: 48px;
+      text-align: right;
+    }
+
+    /* Single-bar live layout (no archetype label) */
+    .mv-visual-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .mv-visual-bot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .mv-ko-tag {
@@ -480,12 +510,6 @@
     .mv-def-warn   { background: #fff0e6; color: #c05000; border: 1px solid #f0c090; }
     .mv-def-2hko   { background: #fffbe6; color: #8a6900; border: 1px solid #e8d88a; }
     .mv-def-ok     { background: #e6ffe6; color: #2a7a2a; border: 1px solid #b2dcb2; }
-
-    .mv-visual-bot {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
 
     .mv-track {
       flex: 1;
@@ -936,9 +960,9 @@
     .my-stage  { background: #e8f0fe; color: #1a73e8; border: 1px solid #c5d8fb; }
     .opp-stage { background: #fce8e6; color: #d93025; border: 1px solid #f5c5c2; }
   </style>
-  <script type="module" crossorigin src="/damagecalc/assets/main-BGMky6Gq.js"></script>
+  <script type="module" crossorigin src="/damagecalc/assets/main-B5kkhRNE.js"></script>
   <link rel="modulepreload" crossorigin href="/damagecalc/assets/chaos-DFE1WZAB.js">
-  <link rel="modulepreload" crossorigin href="/damagecalc/assets/leadSelector-Dj481NLM.js">
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/leadSelector-D8rWIOl-.js">
 </head>
 <body>
   <h1>K CALC</h1>

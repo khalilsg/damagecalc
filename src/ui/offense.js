@@ -30,10 +30,16 @@ function pctRange(minPct, maxPct) {
   return lo === hi ? `${hi}%` : `${lo}–${hi}%`;
 }
 
-// ── Classification merging ────────────────────────────────────────────────────
+// ── Archetype label shortening ────────────────────────────────────────────────
 
-// Return the "stronger" (higher-priority) of two KO classifications.
-// Used to pick the best achievable outcome across archetypes.
+const ARCH_SHORT = {
+  'Max SpDef':   'Max SpD',
+  'Max Def':     'Max Def',
+  'Min Defense': 'Min Def',
+};
+
+// ── Classification merging (highest priority wins) ────────────────────────────
+
 const CLS_ORDER = ['guaranteed-ohko', 'chance-ohko', '2hko', ''];
 function mergeCls(a, b) {
   const ai = CLS_ORDER.indexOf(a ?? '');
@@ -41,27 +47,29 @@ function mergeCls(a, b) {
   return ai <= bi ? (a ?? '') : (b ?? '');
 }
 
-// ── Group archetype rows by move name ─────────────────────────────────────────
+// ── Group rows by move; keep archetypes as separate entries ───────────────────
 
-function groupByMove(rows) {
+function groupByMoveWithArchetypes(rows) {
   const moves = new Map();
   for (const r of rows) {
-    const key = r.move;
-    if (!moves.has(key)) {
-      moves.set(key, {
-        move:           key,
+    if (!moves.has(r.move)) moves.set(r.move, { move: r.move, archs: new Map() });
+    const m    = moves.get(r.move);
+    const key  = r.archetype ?? '';
+    if (!m.archs.has(key)) {
+      m.archs.set(key, {
+        archetype:      key,
         minPct:         r.minPct ?? 0,
         maxPct:         r.maxPct ?? 0,
         classification: r.classification ?? '',
       });
     } else {
-      const m = moves.get(key);
-      m.minPct         = Math.min(m.minPct, r.minPct ?? 0);
-      m.maxPct         = Math.max(m.maxPct, r.maxPct ?? 0);
-      m.classification = mergeCls(m.classification, r.classification);
+      const a = m.archs.get(key);
+      a.minPct         = Math.min(a.minPct, r.minPct ?? 0);
+      a.maxPct         = Math.max(a.maxPct, r.maxPct ?? 0);
+      a.classification = mergeCls(a.classification, r.classification ?? '');
     }
   }
-  return [...moves.values()];
+  return [...moves.values()].map(m => ({ move: m.move, archs: [...m.archs.values()] }));
 }
 
 // ── KO tag chip ───────────────────────────────────────────────────────────────
@@ -69,36 +77,63 @@ function groupByMove(rows) {
 function buildKoTag(classification) {
   if (!classification) return null;
   const tag = el('span', 'mv-ko-tag');
-  if (classification === 'guaranteed-ohko') {
-    tag.className = 'mv-ko-tag mv-ko-ohko';
-    tag.textContent = 'OHKO ✓';
-  } else if (classification === 'chance-ohko') {
-    tag.className = 'mv-ko-tag mv-ko-chance';
-    tag.textContent = 'OHKO ~';
-  } else if (classification === '2hko') {
-    tag.className = 'mv-ko-tag mv-ko-2hko';
-    tag.textContent = '2HKO';
-  } else {
-    return null;
-  }
+  if      (classification === 'guaranteed-ohko') { tag.className = 'mv-ko-tag mv-ko-ohko';   tag.textContent = 'OHKO ✓'; }
+  else if (classification === 'chance-ohko')     { tag.className = 'mv-ko-tag mv-ko-chance'; tag.textContent = 'OHKO ~'; }
+  else if (classification === '2hko')            { tag.className = 'mv-ko-tag mv-ko-2hko';   tag.textContent = '2HKO';   }
+  else return null;
   return tag;
 }
 
-// ── Single move visual row ────────────────────────────────────────────────────
+// ── Move visual block: name header + one bar row per archetype ────────────────
 
-function buildMoveRow(moveName, classification, minPct, maxPct) {
-  const row = el('div', 'mv-visual-row');
+function buildMoveBlock(moveName, archs) {
+  const block = el('div', 'mv-visual-row');
 
-  // Top: name + KO tag
+  // Move name header
+  const nameRow = el('div', 'mv-name-row');
+  const nameSpan = el('span', 'mv-name');
+  nameSpan.textContent = moveName;
+  nameRow.appendChild(nameSpan);
+  block.appendChild(nameRow);
+
+  // One bar row per archetype
+  for (const { archetype, classification, minPct, maxPct } of archs) {
+    const archRow = el('div', 'mv-arch-row');
+
+    const lbl = el('span', 'mv-arch-label');
+    lbl.textContent = ARCH_SHORT[archetype] ?? archetype;
+    archRow.appendChild(lbl);
+
+    const track = el('div', 'mv-track');
+    applyBar(track, minPct, maxPct);
+    archRow.appendChild(track);
+
+    const pctSpan = el('span', 'mv-pct');
+    pctSpan.textContent = pctRange(minPct, maxPct);
+    archRow.appendChild(pctSpan);
+
+    const tag = buildKoTag(classification);
+    if (tag) archRow.appendChild(tag);
+
+    block.appendChild(archRow);
+  }
+
+  return block;
+}
+
+// ── Live-stages single-archetype block (no label column) ─────────────────────
+
+function buildLiveMoveBlock(moveName, classification, minPct, maxPct) {
+  const block = el('div', 'mv-visual-row');
+
   const top = el('div', 'mv-visual-top');
   const nameSpan = el('span', 'mv-name');
   nameSpan.textContent = moveName;
   top.appendChild(nameSpan);
   const tag = buildKoTag(classification);
   if (tag) top.appendChild(tag);
-  row.appendChild(top);
+  block.appendChild(top);
 
-  // Bottom: bar + pct
   if ((maxPct ?? 0) > 0) {
     const bot = el('div', 'mv-visual-bot');
     const track = el('div', 'mv-track');
@@ -107,10 +142,10 @@ function buildMoveRow(moveName, classification, minPct, maxPct) {
     const pctSpan = el('span', 'mv-pct');
     pctSpan.textContent = pctRange(minPct, maxPct);
     bot.appendChild(pctSpan);
-    row.appendChild(bot);
+    block.appendChild(bot);
   }
 
-  return row;
+  return block;
 }
 
 // ── Main renderer ─────────────────────────────────────────────────────────────
@@ -129,13 +164,13 @@ export function renderOffense(offenseData, offenseExpandedData, container, state
       const card = el('div', 'matchup-card');
       card.appendChild(cardHeader(`vs. ${opponentName}`));
 
-      const oppStages    = state?.opponentStages?.[opponentName] ?? {};
+      const oppStages     = state?.opponentStages?.[opponentName] ?? {};
       const hasLiveStages =
         Object.values(myStages).some(v => v !== 0) ||
         Object.values(oppStages).some(v => v !== 0);
 
       if (hasLiveStages && expandedPlayer) {
-        // Live stages: use precomputed grid at current boost levels
+        // Live stages: one cell per move — single bar, no archetype label
         const expandedMatchup = expandedPlayer.matchups.find(m => m.opponentName === opponentName);
         if (expandedMatchup) {
           let hasRows = false;
@@ -147,16 +182,16 @@ export function renderOffense(offenseData, offenseExpandedData, container, state
             const cell     = grid[`${myStage},${oppStage}`];
             if (!cell) continue;
             hasRows = true;
-            card.appendChild(buildMoveRow(moveName, cell.classification, cell.minPct, cell.maxPct));
+            card.appendChild(buildLiveMoveBlock(moveName, cell.classification, cell.minPct, cell.maxPct));
           }
           if (!hasRows) card.appendChild(emptyNote('No data at current stages.'));
         }
       } else {
-        // Normal path: each scenario entry has all archetype rows for all moves
+        // Normal path: one scenario entry per boost label, each has all archetype rows
         for (const { label, rows } of scenarios) {
           if (label !== 'Base') card.appendChild(scenarioLabel(label));
-          for (const { move, classification, minPct, maxPct } of groupByMove(rows)) {
-            card.appendChild(buildMoveRow(move, classification, minPct, maxPct));
+          for (const { move, archs } of groupByMoveWithArchetypes(rows)) {
+            card.appendChild(buildMoveBlock(move, archs));
           }
         }
       }
