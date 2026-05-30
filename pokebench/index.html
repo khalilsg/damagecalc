@@ -381,6 +381,66 @@
       color: #444;
     }
 
+    /* ── Paste import ────────────────────────────────────────────────────── */
+
+    .pb-paste-section {
+      margin-bottom: 4px;
+    }
+
+    .pb-paste-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .pb-paste-hint {
+      font-weight: 400;
+      text-transform: none;
+      color: #aaa;
+      font-size: 0.72rem;
+      letter-spacing: 0;
+    }
+
+    .pb-paste-input {
+      width: 100%;
+      font-family: 'Courier New', 'Menlo', monospace;
+      font-size: 0.8rem;
+      line-height: 1.55;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #fafafa;
+      color: #1a1a1a;
+      resize: vertical;
+    }
+    .pb-paste-input:focus    { outline: none; border-color: #555; background: #fff; }
+    .pb-paste-input::placeholder { color: #ccc; }
+
+    .pb-divider {
+      text-align: center;
+      font-size: 0.72rem;
+      color: #bbb;
+      margin: 14px 0;
+      position: relative;
+    }
+    .pb-divider::before,
+    .pb-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 42%;
+      height: 1px;
+      background: #e8e8e8;
+    }
+    .pb-divider::before { left: 0; }
+    .pb-divider::after  { right: 0; }
+
     /* ── Empty state ──────────────────────────────────────────────────────── */
 
     .pb-empty {
@@ -403,6 +463,17 @@
 
   <div class="pb-form">
     <form id="bench-form">
+      <!-- Paste import -->
+      <div class="pb-paste-section">
+        <div class="pb-paste-label">
+          Paste Set
+          <span class="pb-paste-hint">auto-fills the fields below</span>
+        </div>
+        <textarea id="paste-input" class="pb-paste-input" rows="6"
+          placeholder="Alakazam-Mega @ Alakazite&#10;Ability: Trace&#10;EVs: 32 SpA / 2 Def / 32 Spe&#10;Timid Nature&#10;- Dazzling Gleam&#10;- Focus Blast&#10;- Psychic&#10;- Protect"></textarea>
+      </div>
+      <div class="pb-divider">or fill in manually</div>
+
       <!-- Row 1: Mon / Nature / Item / Format / Top N -->
       <div class="pb-form-row">
         <div class="pb-field field-mon">

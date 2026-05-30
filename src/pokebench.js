@@ -10,6 +10,7 @@ import { runOffensiveCheck, runDefensiveCheck, runSpeedAudit } from '../pokebenc
 import { resolveSpecies, isMoveUsable } from '../pokebench/calc.js';
 import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
 import { allSpecies } from './calcEngine.js';
+import { parseSets } from './parser.js';
 
 // ── Browser-safe chaos parsers (no process.stderr) ──────────────────────────
 
@@ -292,6 +293,43 @@ function initMonSearch() {
   });
 }
 
+// ── Paste-import: fill form from a Showdown-format set ───────────────────────
+
+function applyParsedSet(set) {
+  if (set.name)   document.getElementById('mon-search').value    = set.name;
+  if (set.nature) document.getElementById('nature-select').value = set.nature;
+  document.getElementById('item-input').value = set.item ?? '';
+  if (set.evs) {
+    document.getElementById('ev-hp').value  = set.evs.hp  ?? 0;
+    document.getElementById('ev-atk').value = set.evs.atk ?? 0;
+    document.getElementById('ev-def').value = set.evs.def ?? 0;
+    document.getElementById('ev-spa').value = set.evs.spa ?? 0;
+    document.getElementById('ev-spd').value = set.evs.spd ?? 0;
+    document.getElementById('ev-spe').value = set.evs.spe ?? 0;
+  }
+  document.querySelectorAll('.pb-move-input').forEach((inp, i) => {
+    inp.value = set.moves?.[i] ?? '';
+  });
+  if (set.boosts?.length) {
+    document.getElementById('boosts-input').value = set.boosts
+      .map(b => `${b.modifier > 0 ? '+' : ''}${b.modifier} ${b.stat}`)
+      .join(', ');
+  }
+}
+
+function initPasteImport() {
+  const ta = document.getElementById('paste-input');
+  if (!ta) return;
+  ta.addEventListener('input', () => {
+    const text = ta.value.trim();
+    if (!text.includes('\n')) return; // wait for at least 2 lines
+    try {
+      const sets = parseSets(text);
+      if (sets.length > 0) applyParsedSet(sets[0]);
+    } catch { /* ignore mid-paste parse errors */ }
+  });
+}
+
 // ── Boosts parsing ───────────────────────────────────────────────────────────
 
 function parseBoosts(str) {
@@ -426,6 +464,7 @@ async function runBenchmark() {
 
 initFormats();
 initMonSearch();
+initPasteImport();
 initTabs();
 
 document.getElementById('bench-btn').addEventListener('click', runBenchmark);
