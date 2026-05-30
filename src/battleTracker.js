@@ -5,6 +5,7 @@ const state = {
   opponentStages:      {},   // { pokemonName: { atk, spa, def, spd, spe } }
   opponentMoves:       {},   // { pokemonName: [{ name, calcs, defGrids }] }
   weather:             null, // 'Sun' | 'Rain' | 'Sand' | 'Snow' | null
+  terrain:             null, // 'Electric' | 'Grassy' | 'Misty' | 'Psychic' | null
   myScreens:           { reflect: false, lightScreen: false },
   opponentScreens:     { reflect: false, lightScreen: false },
   myFriendGuard:       false,
@@ -24,6 +25,7 @@ export function initTracker(playerNames, opponentNames) {
   state.opponentStages     = Object.fromEntries(opponentNames.map(n => [n, ZERO()]));
   state.opponentMoves      = Object.fromEntries(opponentNames.map(n => [n, []]));
   state.weather            = null;
+  state.terrain            = null;
   state.myScreens          = { reflect: false, lightScreen: false };
   state.opponentScreens    = { reflect: false, lightScreen: false };
   state.myFriendGuard      = false;
@@ -69,6 +71,12 @@ export function removeOpponentMove(name, moveName) {
 // Toggle weather (press same value to clear)
 export function setWeather(w) {
   state.weather = state.weather === w ? null : w;
+  notify();
+}
+
+// Toggle terrain (press same value to clear)
+export function setTerrain(t) {
+  state.terrain = state.terrain === t ? null : t;
   notify();
 }
 

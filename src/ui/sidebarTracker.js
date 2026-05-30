@@ -2,7 +2,7 @@ import {
   adjustMyStage, adjustOpponentStage,
   resetMyStages, resetOpponentStages,
   addOpponentMove, removeOpponentMove,
-  setWeather, setMyScreen, setOpponentScreen,
+  setWeather, setTerrain, setMyScreen, setOpponentScreen,
   setMyFriendGuard, setOpponentFriendGuard,
   toggleMyHelpingHand,
   removeMyPokemon, removeOpponentPokemon,
@@ -22,6 +22,13 @@ const WEATHER_OPTIONS = [
   { label: 'Rain', value: 'Rain' },
   { label: 'Sand', value: 'Sand' },
   { label: 'Snow', value: 'Snow' },
+];
+
+const TERRAIN_OPTIONS = [
+  { label: 'Electric', value: 'Electric' },
+  { label: 'Grassy',   value: 'Grassy'   },
+  { label: 'Misty',    value: 'Misty'    },
+  { label: 'Psychic',  value: 'Psychic'  },
 ];
 
 export function renderSidebarTracker(container, state, playerSets) {
@@ -68,6 +75,20 @@ function makeFieldControls(state) {
     wBtns.appendChild(btn);
   }
   wrap.appendChild(wBtns);
+
+  // Terrain
+  const tLabel = el('div', 'field-row-label');
+  tLabel.textContent = 'Terrain';
+  wrap.appendChild(tLabel);
+
+  const tBtns = el('div', 'field-btn-row');
+  for (const { label, value } of TERRAIN_OPTIONS) {
+    const btn = el('button', `field-btn terrain-btn terrain-${value.toLowerCase()}${state.terrain === value ? ' active' : ''}`);
+    btn.textContent = label;
+    btn.addEventListener('click', () => setTerrain(value));
+    tBtns.appendChild(btn);
+  }
+  wrap.appendChild(tBtns);
 
   // My screens
   const myLabel = el('div', 'field-row-label');
@@ -205,6 +226,7 @@ function makeOpponentCard(name, stages, trackedMoves, playerSets, state) {
     try {
       const fieldOptions = {
         weather:         state.weather,
+        terrain:         state.terrain,
         myScreens:       state.myScreens,
         opponentScreens: state.opponentScreens,
         myFriendGuard:   state.myFriendGuard,

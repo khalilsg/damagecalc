@@ -33,6 +33,7 @@ function fieldKey(state) {
     .join(',');
   return [
     state.weather,
+    state.terrain,
     state.myScreens.reflect, state.myScreens.lightScreen,
     state.opponentScreens.reflect, state.opponentScreens.lightScreen,
     state.myFriendGuard, state.opponentFriendGuard,
@@ -71,6 +72,7 @@ async function renderReactive(state) {
     try {
       analysisData = await runAnalysis(currentPlayerSets, currentOpponents, {
         weather:             state.weather,
+        terrain:             state.terrain,
         myScreens:           state.myScreens,
         opponentScreens:     state.opponentScreens,
         myFriendGuard:       state.myFriendGuard,

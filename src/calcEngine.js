@@ -5,10 +5,11 @@ import { getTopMoves } from './smogonStats.js';
 
 export const gen = Generations.get(9);
 
-function buildField(weather, defenderOptions = {}, attackerOptions = {}) {
+function buildField(weather, defenderOptions = {}, attackerOptions = {}, terrain = null) {
   return new Field({
     gameType: 'Doubles',
     ...(weather ? { weather } : {}),
+    ...(terrain ? { terrain } : {}),
     attackerSide: new Side({
       isHelpingHand: attackerOptions.isHelpingHand ?? false,
     }),
@@ -257,6 +258,7 @@ function stripDefenderName(r, playerName) {
 export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) {
   const {
     weather = null,
+    terrain = null,
     myScreens = {},
     opponentScreens = {},
     myFriendGuard = false,
@@ -267,7 +269,9 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
   // defenseField is shared (I'm always the defender here)
   const defenseField = buildField(
     weather,
-    { ...myScreens, friendGuard: myFriendGuard }
+    { ...myScreens, friendGuard: myFriendGuard },
+    {},
+    terrain
   );
   // offenseField is built per-player below (HH is per-Pokémon)
 
@@ -285,7 +289,8 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
     const offenseField = buildField(
       weather,
       { ...opponentScreens, friendGuard: opponentFriendGuard },
-      { isHelpingHand: myHelpingHand[playerName] ?? false }
+      { isHelpingHand: myHelpingHand[playerName] ?? false },
+      terrain
     );
     if (!playerSpecies) continue;
 
@@ -439,7 +444,9 @@ export async function computeIncomingMove(moveName, opponentName, playerSets, fi
 
   const field = buildField(
     fieldOptions.weather ?? null,
-    { ...fieldOptions.myScreens ?? {}, friendGuard: fieldOptions.myFriendGuard ?? false }
+    { ...fieldOptions.myScreens ?? {}, friendGuard: fieldOptions.myFriendGuard ?? false },
+    {},
+    fieldOptions.terrain ?? null
   );
 
   const archetypes = cat === 'special'
@@ -475,7 +482,9 @@ export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOp
   const defStat = cat === 'special' ? 'spd' : 'def';
   const field = buildField(
     fieldOptions.weather ?? null,
-    { ...fieldOptions.myScreens ?? {}, friendGuard: fieldOptions.myFriendGuard ?? false }
+    { ...fieldOptions.myScreens ?? {}, friendGuard: fieldOptions.myFriendGuard ?? false },
+    {},
+    fieldOptions.terrain ?? null
   );
 
   const grid = {};
