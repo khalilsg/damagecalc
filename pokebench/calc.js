@@ -79,17 +79,32 @@ export function makePokemon(speciesName, spread, item, boosts = {}) {
 
 // ── Calc ──────────────────────────────────────────────────────────────────────
 
-const DOUBLES_FIELD = new Field({ gameType: 'Doubles' });
+const DOUBLES_FIELD_DEFAULT = new Field({ gameType: 'Doubles' });
+
+function buildField(fieldOptions = {}) {
+  const { terrain, weather } = fieldOptions;
+  if (!terrain && !weather) return DOUBLES_FIELD_DEFAULT;
+  return new Field({
+    gameType: 'Doubles',
+    ...(weather  ? { weather  } : {}),
+    ...(terrain  ? { terrain  } : {}),
+  });
+}
 
 /**
  * Run a single damage calculation.
+ * @param {Pokemon} attacker
+ * @param {Pokemon} defender
+ * @param {string}  moveName
+ * @param {{ terrain?: string, weather?: string }} [fieldOptions={}]
  * Returns { moveName, minPct, maxPct, kochanceText } or null.
  */
-export function runCalc(attacker, defender, moveName) {
+export function runCalc(attacker, defender, moveName, fieldOptions = {}) {
   try {
     const move = new Move(gen, moveName);
     if ((move.bp ?? 0) === 0) return null;
-    const result = calculate(gen, attacker, defender, move, DOUBLES_FIELD);
+    const field  = buildField(fieldOptions);
+    const result = calculate(gen, attacker, defender, move, field);
     if (result.desc().includes('No damage')) return null;
 
     const dmg = result.damage;

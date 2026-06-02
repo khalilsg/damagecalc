@@ -24,13 +24,13 @@ function isSkipped(moveName) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Run calc vs all (spread × item) combos; return min/max pct across the whole set. */
-function calcRangeAcrossSpreads(atkName, atkSpread, atkItem, atkBoosts, defName, defSpreads, defItems, moveName) {
+function calcRangeAcrossSpreads(atkName, atkSpread, atkItem, atkBoosts, defName, defSpreads, defItems, moveName, fieldOptions = {}) {
   const pcts = [];
   for (const spread of defSpreads) {
     for (const item of defItems) {
       const atk = makePokemon(atkName, atkSpread, atkItem, atkBoosts ?? {});
       const def = makePokemon(defName, spread, item);
-      const r   = runCalc(atk, def, moveName);
+      const r   = runCalc(atk, def, moveName, fieldOptions);
       if (r) { pcts.push(r.minPct, r.maxPct); }
     }
   }
@@ -38,10 +38,10 @@ function calcRangeAcrossSpreads(atkName, atkSpread, atkItem, atkBoosts, defName,
 }
 
 /** KO text using the most common spread + item (representative label). */
-function reprKoText(atkName, atkSpread, atkItem, atkBoosts, defName, defSpread, defItem, moveName) {
+function reprKoText(atkName, atkSpread, atkItem, atkBoosts, defName, defSpread, defItem, moveName, fieldOptions = {}) {
   const atk = makePokemon(atkName, atkSpread, atkItem, atkBoosts ?? {});
   const def = makePokemon(defName, defSpread, defItem);
-  return runCalc(atk, def, moveName)?.kochanceText ?? '';
+  return runCalc(atk, def, moveName, fieldOptions)?.kochanceText ?? '';
 }
 
 function fmtPct(n) { return n.toFixed(1); }
@@ -58,7 +58,7 @@ function fmtPct(n) { return n.toFixed(1); }
  * ]
  * moveRows: [{ moveName, minPct, maxPct, kochanceText }]
  */
-export function runOffensiveCheck(userSpec, opponents) {
+export function runOffensiveCheck(userSpec, opponents, fieldOptions = {}) {
   const userSpeciesData = getSpeciesData(userSpec.resolvedName);
   const userSpread = { nature: userSpec.nature, evs: userSpec.evs };
   const userSpeed  = calcSpeed(userSpeciesData?.baseStats?.spe ?? 0, userSpread);
@@ -85,12 +85,12 @@ export function runOffensiveCheck(userSpec, opponents) {
 
       const range = calcRangeAcrossSpreads(
         userSpec.resolvedName, userSpread, userSpec.item, userSpec.boosts,
-        resolvedOpp, oppSpreads.length ? oppSpreads : [{ nature: 'Serious', evs: {} }], oppItems, moveName
+        resolvedOpp, oppSpreads.length ? oppSpreads : [{ nature: 'Serious', evs: {} }], oppItems, moveName, fieldOptions
       );
       if (!range) continue;
 
       const koText = oppSpreads.length
-        ? reprKoText(userSpec.resolvedName, userSpread, userSpec.item, userSpec.boosts, resolvedOpp, oppSpreads[0], oppItems[0], moveName)
+        ? reprKoText(userSpec.resolvedName, userSpread, userSpec.item, userSpec.boosts, resolvedOpp, oppSpreads[0], oppItems[0], moveName, fieldOptions)
         : '';
 
       moveRows.push({ moveName, ...range, kochanceText: koText });
@@ -114,7 +114,7 @@ export function runOffensiveCheck(userSpec, opponents) {
  * ]
  * moveRows: [{ moveName, minPct, maxPct, kochanceText, survives }]
  */
-export function runDefensiveCheck(userSpec, opponents) {
+export function runDefensiveCheck(userSpec, opponents, fieldOptions = {}) {
   const userSpread = { nature: userSpec.nature, evs: userSpec.evs };
   const results = [];
 
@@ -138,7 +138,7 @@ export function runDefensiveCheck(userSpec, opponents) {
         for (const item of oppItems) {
           const atk = makePokemon(resolvedOpp, spread, item);
           const def = makePokemon(userSpec.resolvedName, userSpread, userSpec.item);
-          const r   = runCalc(atk, def, moveName);
+          const r   = runCalc(atk, def, moveName, fieldOptions);
           if (r) { pcts.push(r.minPct, r.maxPct); }
         }
       }
@@ -146,7 +146,7 @@ export function runDefensiveCheck(userSpec, opponents) {
 
       const minPct = Math.min(...pcts);
       const maxPct = Math.max(...pcts);
-      const koText = reprKoText(resolvedOpp, effectiveSpreads[0], oppItems[0], {}, userSpec.resolvedName, userSpread, userSpec.item, moveName);
+      const koText = reprKoText(resolvedOpp, effectiveSpreads[0], oppItems[0], {}, userSpec.resolvedName, userSpread, userSpec.item, moveName, fieldOptions);
 
       moveRows.push({ moveName, minPct, maxPct, kochanceText: koText, survives: maxPct < 100 });
     }
