@@ -629,6 +629,124 @@
     .summary-yellow { color: #8a6900; }
     .summary-cyan   { color: #1a73e8; }
 
+    /* ---- Save Match Modal ---- */
+    .sm-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .sm-backdrop.sm-open { display: flex; }
+
+    .sm-modal {
+      background: #fff;
+      border-radius: 10px;
+      width: 460px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 64px);
+      overflow-y: auto;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.22);
+    }
+
+    .sm-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sm-title { font-size: 1rem; font-weight: 700; }
+    .sm-close {
+      background: none; border: none; color: #bbb;
+      font-size: 1.3rem; cursor: pointer; line-height: 1; padding: 0 0 0 12px;
+    }
+    .sm-close:hover { color: #555; }
+
+    .sm-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+    .sm-section-label {
+      font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: #999; margin-bottom: 6px;
+    }
+
+    .sm-outcome-row { display: flex; gap: 8px; }
+    .sm-outcome-btn {
+      flex: 1; border: 2px solid #e0e0e0; background: #fafafa;
+      border-radius: 7px; padding: 10px 8px 8px; cursor: pointer;
+      text-align: center; font-size: 0.82rem; font-weight: 600; color: #666;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .sm-emoji { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    .sm-outcome-btn:hover { border-color: #bbb; }
+    .sm-outcome-btn.sm-win.sm-selected  { border-color: #2a8a2a; background: #f0fff0; color: #1a6a1a; }
+    .sm-outcome-btn.sm-loss.sm-selected { border-color: #c03030; background: #fff0f0; color: #901010; }
+
+    .sm-team-row { display: flex; flex-direction: column; gap: 5px; }
+    .sm-team-name-input {
+      border: 1px solid #ddd; border-radius: 5px; padding: 6px 10px;
+      font-family: inherit; font-size: 0.82rem; color: #1a1a1a;
+      background: #fafafa; width: 100%;
+    }
+    .sm-team-name-input:focus { outline: none; border-color: #1a1a1a; }
+    .sm-poke-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sm-poke-chip {
+      background: #f0f0f0; border: 1px solid #e0e0e0;
+      border-radius: 3px; padding: 2px 7px; font-size: 0.68rem; color: #555;
+    }
+    .sm-no-tracker { font-size: 0.7rem; color: #bbb; font-style: italic; }
+
+    .sm-reason-section { display: flex; flex-direction: column; gap: 6px; }
+    .sm-reasons { display: flex; flex-wrap: wrap; gap: 6px; }
+    .sm-reason-chip {
+      background: #f0f0f0; border: 1.5px solid #ddd;
+      border-radius: 20px; padding: 5px 12px; font-size: 0.72rem;
+      cursor: pointer; user-select: none;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .sm-reason-chip:hover { background: #e5e5e5; }
+    .sm-reason-chip.sm-selected { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+
+    .sm-note-textarea {
+      width: 100%; border: 1px solid #ddd; border-radius: 5px;
+      padding: 8px 10px; font-family: inherit; font-size: 0.8rem;
+      color: #1a1a1a; resize: none; height: 64px; background: #fafafa; line-height: 1.4;
+    }
+    .sm-note-textarea:focus { outline: none; border-color: #1a1a1a; }
+
+    .sm-footer {
+      padding: 12px 20px 16px; display: flex; justify-content: flex-end;
+      gap: 8px; border-top: 1px solid #eee;
+    }
+    .sm-btn-secondary {
+      background: #f0f0f0; border: 1px solid #ddd; color: #555;
+      padding: 7px 16px; border-radius: 5px; cursor: pointer; font-size: 0.8rem;
+    }
+    .sm-btn-secondary:hover { background: #e5e5e5; }
+    .sm-btn-primary {
+      background: #1a1a1a; border: none; color: #fff;
+      padding: 7px 18px; border-radius: 5px; cursor: pointer;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .sm-btn-primary:hover { background: #333; }
+    .sm-btn-primary:disabled { opacity: 0.35; cursor: default; }
+
+    /* ---- Save Match button (sidebar) ---- */
+    .save-match-zone {
+      margin-top: 16px; padding-top: 12px; border-top: 1px solid #e8e8e8;
+    }
+    .save-match-btn {
+      width: 100%; background: #1a1a1a; border: none; color: #fff;
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; padding: 8px 10px; border-radius: 5px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .save-match-btn:hover { background: #333; }
+    .save-match-count { font-size: 0.63rem; text-align: center; color: #aaa; margin-top: 4px; }
+
     /* ---- Battle Tracker sidebar ---- */
     .tracker-sidebar {
       width: 260px;
@@ -969,7 +1087,7 @@
 </head>
 <body>
   <h1>K CALC</h1>
-  <p class="subtitle">Competitive Pokémon Analysis Engine — Champions Format &nbsp;·&nbsp; <a href="./demo/" style="color:#888;font-size:0.78rem;">Demo</a></p>
+  <p class="subtitle">Competitive Pokémon Analysis Engine — Champions Format &nbsp;·&nbsp; <a href="./demo/" style="color:#888;font-size:0.78rem;">Demo</a> &nbsp;·&nbsp; <a href="./history.html" style="color:#888;font-size:0.78rem;">📋 Match History</a></p>
 
   <div class="app-layout">
     <div class="main-content">

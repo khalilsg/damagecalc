@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Post-Match Review — Mock</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f4f4f2;
+    color: #1a1a1a;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Nav ────────────────────────────────────────────────────────── */
+  .mock-nav {
+    background: #222;
+    color: #aaa;
+    display: flex;
+    gap: 4px;
+    padding: 10px 16px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .mock-nav span { color: #666; margin: 0 4px; }
+  .mock-nav-btn {
+    background: #333;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 5px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mock-nav-btn:hover { background: #444; color: #eee; }
+  .mock-nav-btn.active { background: #4a90e2; border-color: #4a90e2; color: #fff; }
+  .mock-nav-label { color: #666; font-size: 0.65rem; }
+
+  /* ── Views ──────────────────────────────────────────────────────── */
+  .view { display: none; padding: 20px; }
+  .view.active { display: block; }
+
+  /* ── Shared sidebar chrome ──────────────────────────────────────── */
+  .app-shell {
+    display: flex;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .sidebar-mock {
+    width: 260px;
+    flex-shrink: 0;
+  }
+  .main-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .sidebar-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #888;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .tracker-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #aaa;
+    margin: 12px 0 6px;
+  }
+  .tracker-card {
+    background: #f9f9f9;
+    border: 1px solid #e8e8e8;
+    border-radius: 5px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+  }
+  .tracker-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .tracker-poke-name {
+    font-weight: 700;
+    font-size: 0.82rem;
+  }
+  .header-btns { display: flex; gap: 4px; }
+  .tracker-reset-btn {
+    background: #ebebeb;
+    border: 1px solid #d0d0d0;
+    color: #555;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .ko-btn {
+    background: none;
+    border: 1px solid #ddd;
+    color: #ccc;
+    font-size: 0.7rem;
+    padding: 2px 5px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .stat-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    margin: 2px 0;
+  }
+  .stat-label { color: #888; width: 28px; font-size: 0.7rem; }
+  .stage-sm-btn {
+    background: #eee;
+    border: 1px solid #d0d0d0;
+    color: #555;
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage-val { width: 24px; text-align: center; font-size: 0.72rem; }
+  .stage-val.pos { color: #2a7a2a; font-weight: 700; }
+  .stage-val.neg { color: #c00; font-weight: 700; }
+  .moves-section-label { font-size: 0.65rem; color: #aaa; margin: 6px 0 3px; }
+  .move-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eee;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.68rem;
+    margin: 1px 2px 1px 0;
+  }
+  .move-tag .rm { color: #bbb; cursor: pointer; font-size: 0.8rem; line-height: 1; }
+  .move-tag .rm:hover { color: #c00; }
+  .field-btn-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 4px; }
+  .field-btn {
+    background: #ebebeb;
+    border: 1px solid #d0d0d0;
+    color: #555;
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .field-btn.active { background: #222; color: #fff; border-color: #222; }
+  .field-row-label { font-size: 0.65rem; color: #aaa; margin: 6px 0 3px; }
+
+  /* ── Save Match button ──────────────────────────────────────────── */
+  .save-match-zone {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+  }
+  .save-match-btn {
+    width: 100%;
+    background: #1a1a1a;
+    border: none;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 9px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .save-match-btn:hover { background: #333; }
+  .save-match-btn .icon { font-size: 0.9rem; }
+  .save-count-badge {
+    font-size: 0.65rem;
+    text-align: center;
+    color: #aaa;
+    margin-top: 5px;
+  }
+
+  /* ── Modal overlay ──────────────────────────────────────────────── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 10px;
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.22);
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+  .modal-subtitle {
+    font-size: 0.72rem;
+    color: #888;
+    margin-top: 2px;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: #bbb;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 0 0 12px;
+    line-height: 1;
+  }
+  .modal-close:hover { color: #555; }
+  .modal-body { padding: 18px 20px; }
+  .modal-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+    margin-bottom: 8px;
+  }
+
+  /* Outcome selector */
+  .outcome-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .outcome-btn {
+    flex: 1;
+    border: 2px solid #e0e0e0;
+    background: #fafafa;
+    border-radius: 7px;
+    padding: 10px 8px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #666;
+  }
+  .outcome-btn .emoji { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+  .outcome-btn:hover { border-color: #bbb; background: #f0f0f0; }
+  .outcome-btn.win.selected  { border-color: #2a8a2a; background: #f0fff0; color: #1a6a1a; }
+  .outcome-btn.loss.selected { border-color: #c03030; background: #fff0f0; color: #901010; }
+  .outcome-btn.tie.selected  { border-color: #777; background: #f5f5f5; color: #444; }
+
+  /* Loss reason chips */
+  .reason-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .reason-chip {
+    background: #f0f0f0;
+    border: 1.5px solid #ddd;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    user-select: none;
+  }
+  .reason-chip:hover { background: #e5e5e5; border-color: #ccc; }
+  .reason-chip.selected { background: #1a1a1a; border-color: #1a1a1a; color: #fff; }
+  .reason-chip.selected.hax { background: #6a3a9a; border-color: #6a3a9a; }
+  .reason-chip.selected.matchup { background: #c03030; border-color: #c03030; }
+  .reason-chip.selected.speed { background: #1a6aaa; border-color: #1a6aaa; }
+  .reason-chip.selected.range { background: #c07000; border-color: #c07000; }
+  .reason-chip.selected.lead { background: #3a8a3a; border-color: #3a8a3a; }
+
+  /* Turn input */
+  .turn-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .turn-field textarea {
+    flex: 1;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: #1a1a1a;
+    resize: none;
+    height: 60px;
+    line-height: 1.4;
+    background: #fafafa;
+  }
+  .turn-field textarea:focus { outline: none; border-color: #1a1a1a; }
+
+  /* Snapshot preview strip */
+  .snapshot-strip {
+    background: #f5f5f5;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    font-size: 0.7rem;
+    color: #888;
+    flex-wrap: wrap;
+  }
+  .snapshot-strip strong { color: #444; }
+  .snap-pill {
+    background: #eee;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.65rem;
+    color: #666;
+  }
+
+  .modal-footer {
+    padding: 12px 20px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid #eee;
+  }
+  .btn-secondary {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    color: #555;
+    padding: 7px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .btn-secondary:hover { background: #e5e5e5; }
+  .btn-primary {
+    background: #1a1a1a;
+    border: none;
+    color: #fff;
+    padding: 7px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #333; }
+
+  /* ── History view ───────────────────────────────────────────────── */
+  .history-shell { max-width: 820px; margin: 0 auto; }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .history-header h2 { font-size: 1rem; font-weight: 700; }
+  .history-filters { display: flex; gap: 6px; }
+  .filter-chip {
+    background: #eee;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    color: #555;
+  }
+  .filter-chip.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  /* Summary bar */
+  .summary-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .summary-pill {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 16px;
+    text-align: center;
+    min-width: 80px;
+  }
+  .summary-pill .val {
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: block;
+  }
+  .summary-pill .lbl { font-size: 0.62rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; }
+  .summary-pill.win-pill .val { color: #2a8a2a; }
+  .summary-pill.loss-pill .val { color: #c03030; }
+
+  /* Loss pattern bar */
+  .pattern-section { margin-bottom: 20px; }
+  .pattern-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #999;
+    margin-bottom: 8px;
+  }
+  .pattern-bars { display: flex; flex-direction: column; gap: 6px; }
+  .pattern-row { display: flex; align-items: center; gap: 8px; }
+  .pattern-label { font-size: 0.7rem; color: #555; width: 120px; flex-shrink: 0; text-align: right; }
+  .pattern-track {
+    flex: 1;
+    height: 14px;
+    background: #eee;
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .pattern-fill {
+    height: 100%;
+    border-radius: 7px;
+    background: #c03030;
+    transition: width 0.4s;
+  }
+  .pattern-count { font-size: 0.7rem; color: #888; width: 20px; }
+
+  /* Match cards */
+  .match-list { display: flex; flex-direction: column; gap: 8px; }
+  .match-card {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .match-card:hover { border-color: #ccc; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .match-outcome-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .match-outcome-dot.win  { background: #e8f5e8; color: #2a7a2a; }
+  .match-outcome-dot.loss { background: #fde8e8; color: #b02020; }
+  .match-outcome-dot.tie  { background: #eee;    color: #666; }
+  .match-info { flex: 1; }
+  .match-opponents {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+  }
+  .match-poke-chip {
+    background: #f0f0f0;
+    border: 1px solid #e0e0e0;
+    border-radius: 3px;
+    padding: 2px 7px;
+    font-size: 0.7rem;
+    color: #444;
+    font-weight: 500;
+  }
+  .match-poke-chip.flagged {
+    background: #fde8e8;
+    border-color: #e8b8b8;
+    color: #902020;
+  }
+  .match-reason-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+  .match-reason-chip {
+    background: #eee;
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 0.63rem;
+    color: #666;
+  }
+  .match-reason-chip.primary {
+    background: #1a1a1a;
+    color: #fff;
+  }
+  .match-meta { font-size: 0.65rem; color: #bbb; margin-left: auto; flex-shrink: 0; text-align: right; }
+  .match-note {
+    font-size: 0.72rem;
+    color: #777;
+    margin-top: 5px;
+    font-style: italic;
+  }
+
+  /* ── Threat matrix with scout callout (View 4) ───────────────────── */
+  .threat-matrix-mock { max-width: 820px; margin: 0 auto; }
+  .threat-row {
+    display: grid;
+    grid-template-columns: 130px repeat(4, 1fr);
+    gap: 6px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 0.78rem;
+  }
+  .threat-row.header { font-size: 0.68rem; color: #aaa; font-weight: 700; text-transform: uppercase; border-bottom: 2px solid #e0e0e0; padding-bottom: 5px; }
+  .threat-cell { text-align: center; }
+  .threat-name { font-weight: 600; }
+  .threat-bar-wrap { position: relative; }
+  .threat-bar-track { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
+  .threat-bar-fill { height: 100%; border-radius: 3px; }
+  .threat-pct { font-size: 0.65rem; color: #888; margin-top: 2px; text-align: center; }
+  .threat-ko { font-size: 0.65rem; font-weight: 700; padding: 1px 5px; border-radius: 3px; display: inline-block; }
+  .ko-ohko { background: #e8f5e8; color: #2a7a2a; }
+  .ko-2hko { background: #fff8e0; color: #a06000; }
+
+  /* Scout callout */
+  .scout-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fde8e8;
+    border: 1px solid #e8b0b0;
+    color: #902020;
+    border-radius: 4px;
+    padding: 3px 7px;
+    font-size: 0.63rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+  }
+  .scout-badge:hover .scout-tooltip { display: block; }
+  .scout-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a1a;
+    color: #eee;
+    font-size: 0.68rem;
+    font-weight: 400;
+    padding: 8px 12px;
+    border-radius: 6px;
+    width: 220px;
+    line-height: 1.5;
+    z-index: 10;
+    pointer-events: none;
+    white-space: normal;
+  }
+  .scout-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1a1a1a;
+  }
+  .scout-reasons {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .scout-reason-tag {
+    background: #333;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.62rem;
+    color: #ccc;
+  }
+
+  /* ── Threat matrix mock layout ──────────────────────────────────── */
+  .threat-section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #aaa;
+    margin: 16px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #eee;
+  }
+
+  /* ── Annotation callout for the mock nav ───────────────────────── */
+  .annotation {
+    background: #fffbe6;
+    border: 1px solid #e6d800;
+    border-radius: 5px;
+    padding: 8px 14px;
+    font-size: 0.75rem;
+    color: #5a4a00;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .annotation strong { color: #3a2a00; }
+
+  .dimmed { opacity: 0.4; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────────── -->
+<div class="mock-nav">
+  <span class="mock-nav-label">SCREEN →</span>
+  <button class="mock-nav-btn active" onclick="show('v1')">1 · Sidebar</button>
+  <span>→</span>
+  <button class="mock-nav-btn" onclick="show('v2')">2 · Save Modal</button>
+  <span>→</span>
+  <button class="mock-nav-btn" onclick="show('v3')">3 · Match History</button>
+  <span>→</span>
+  <button class="mock-nav-btn" onclick="show('v4')">4 · Scout Callout</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     VIEW 1 — Sidebar with Save Match button
+═══════════════════════════════════════════════════════════════════ -->
+<div class="view active" id="v1">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="annotation">
+      <strong>Screen 1 of 4 — Sidebar addition.</strong>
+      After a match, the player hits "Save Match" at the bottom of the Battle Tracker.
+      The snapshot (opponent Pokémon, moves logged, field conditions, stages) is captured automatically.
+    </div>
+
+    <div class="app-shell">
+      <!-- Sidebar -->
+      <div class="sidebar-mock">
+        <div class="sidebar-title">Battle Tracker</div>
+
+        <!-- Field controls (abbreviated) -->
+        <div class="field-row-label">Weather</div>
+        <div class="field-btn-row">
+          <button class="field-btn">Sun</button>
+          <button class="field-btn active">Rain</button>
+          <button class="field-btn">Sand</button>
+          <button class="field-btn">Snow</button>
+        </div>
+        <div class="field-row-label">Terrain</div>
+        <div class="field-btn-row">
+          <button class="field-btn">Electric</button>
+          <button class="field-btn">Grassy</button>
+          <button class="field-btn">Misty</button>
+          <button class="field-btn">Psychic</button>
+        </div>
+
+        <!-- My Team -->
+        <div class="tracker-section-label">My Team</div>
+
+        <div class="tracker-card">
+          <div class="tracker-card-header">
+            <span class="tracker-poke-name">Blastoise-Mega</span>
+            <div class="header-btns">
+              <button class="tracker-reset-btn">Reset</button>
+              <button class="ko-btn">✕</button>
+            </div>
+          </div>
+          <div class="stat-row"><span class="stat-label">Atk</span><button class="stage-sm-btn">−</button><span class="stage-val">0</span><button class="stage-sm-btn">+</button></div>
+          <div class="stat-row"><span class="stat-label">SpA</span><button class="stage-sm-btn">−</button><span class="stage-val pos">+2</span><button class="stage-sm-btn">+</button></div>
+          <div class="stat-row"><span class="stat-label">Def</span><button class="stage-sm-btn">−</button><span class="stage-val">0</span><button class="stage-sm-btn">+</button></div>
+          <div class="stat-row"><span class="stat-label">SpD</span><button class="stage-sm-btn">−</button><span class="stage-val">0</span><button class="stage-sm-btn">+</button></div>
+          <div class="stat-row"><span class="stat-label">Spe</span><button class="stage-sm-btn">−</button><span class="stage-val neg">−1</span><button class="stage-sm-btn">+</button></div>
+        </div>
+
+        <!-- Opponents -->
+        <div class="tracker-section-label">Opponents</div>
+
+        <div class="tracker-card">
+          <div class="tracker-card-header">
+            <span class="tracker-poke-name">Calyrex-Shadow</span>
+            <div class="header-btns">
+              <button class="tracker-reset-btn">Reset</button>
+              <button class="ko-btn">✕</button>
+            </div>
+          </div>
+          <div class="stat-row"><span class="stat-label">SpA</span><button class="stage-sm-btn">−</button><span class="stage-val">0</span><button class="stage-sm-btn">+</button></div>
+          <div class="stat-row"><span class="stat-label">Spe</span><button class="stage-sm-btn">−</button><span class="stage-val">0</span><button class="stage-sm-btn">+</button></div>
+          <div class="moves-section-label">Moves used:</div>
+          <div>
+            <span class="move-tag">Astral Barrage <span class="rm">×</span></span>
+            <span class="move-tag">Trick Room <span class="rm">×</span></span>
+          </div>
+        </div>
+
+        <div class="tracker-card">
+          <div class="tracker-card-header">
+            <span class="tracker-poke-name">Incineroar</span>
+            <div class="header-btns">
+              <button class="tracker-reset-btn">Reset</button>
+              <button class="ko-btn">✕</button>
+            </div>
+          </div>
+          <div class="stat-row"><span class="stat-label">Atk</span><button class="stage-sm-btn">−</button><span class="stage-val">0</span><button class="stage-sm-btn">+</button></div>
+          <div class="moves-section-label">Moves used:</div>
+          <div>
+            <span class="move-tag">Fake Out <span class="rm">×</span></span>
+            <span class="move-tag">Parting Shot <span class="rm">×</span></span>
+          </div>
+        </div>
+
+        <!-- Save Match zone -->
+        <div class="save-match-zone">
+          <button class="save-match-btn" onclick="openModal()">
+            <span class="icon">💾</span> Save Match
+          </button>
+          <div class="save-count-badge">3 matches saved this session</div>
+        </div>
+      </div>
+
+      <!-- Main content placeholder -->
+      <div class="main-content">
+        <div style="background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:40px;text-align:center;color:#bbb;font-size:0.85rem;">
+          ← Main analysis area (Offense / Defense / Speed tabs)<br>
+          <span style="font-size:0.72rem;color:#ccc;">Shown here to establish layout context</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     VIEW 2 — Post-match modal
+═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="v2">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="annotation">
+      <strong>Screen 2 of 4 — Post-match modal.</strong>
+      Appears after clicking "Save Match." The snapshot (Pokémon, moves, field) is shown at the top.
+      Player picks outcome, optionally tags the reason(s) they lost, and writes a quick note about the key turn.
+    </div>
+
+    <!-- Show sidebar dimmed behind modal -->
+    <div class="app-shell dimmed">
+      <div class="sidebar-mock">
+        <div class="sidebar-title">Battle Tracker</div>
+        <div class="save-match-zone" style="margin-top:8px;">
+          <button class="save-match-btn">💾 Save Match</button>
+        </div>
+      </div>
+      <div class="main-content">
+        <div style="background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:40px;text-align:center;color:#bbb;font-size:0.85rem;">Main area</div>
+      </div>
+    </div>
+
+    <!-- Modal rendered inline for the mock -->
+    <div style="position:relative;margin-top:-120px;display:flex;justify-content:center;z-index:10;">
+      <div class="modal">
+        <div class="modal-header">
+          <div>
+            <div class="modal-title">Save Match</div>
+            <div class="modal-subtitle">How did it go?</div>
+          </div>
+          <button class="modal-close">×</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Auto-captured snapshot -->
+          <div class="modal-section-label">Snapshot (auto-captured)</div>
+          <div class="snapshot-strip">
+            <div><strong>Opponents:</strong> Calyrex-Shadow, Incineroar</div>
+            <div><strong>Field:</strong> <span class="snap-pill">Rain</span></div>
+            <div><strong>Moves seen:</strong> <span class="snap-pill">Astral Barrage</span> <span class="snap-pill">Trick Room</span> <span class="snap-pill">Fake Out</span></div>
+          </div>
+
+          <!-- Outcome -->
+          <div class="modal-section-label">Outcome</div>
+          <div class="outcome-row">
+            <button class="outcome-btn win" onclick="selectOutcome(this,'win')">
+              <span class="emoji">🏆</span> Win
+            </button>
+            <button class="outcome-btn loss selected" onclick="selectOutcome(this,'loss')">
+              <span class="emoji">💀</span> Loss
+            </button>
+          </div>
+
+          <!-- Loss reasons (visible when Loss selected) -->
+          <div id="loss-reasons-section">
+            <div class="modal-section-label">Why did you lose? <span style="color:#bbb;font-weight:400;text-transform:none;font-size:0.65rem;">pick all that apply</span></div>
+            <div class="reason-chips">
+              <span class="reason-chip range selected" onclick="toggleChip(this)">📊 KO range miss</span>
+              <span class="reason-chip speed" onclick="toggleChip(this)">⚡ Speed control</span>
+              <span class="reason-chip lead selected" onclick="toggleChip(this)">🎯 Lead / setup</span>
+              <span class="reason-chip" onclick="toggleChip(this)">🎭 Move choice</span>
+              <span class="reason-chip" onclick="toggleChip(this)">🔍 Threat not scouted</span>
+              <span class="reason-chip matchup" onclick="toggleChip(this)">⚔️ Matchup</span>
+              <span class="reason-chip" onclick="toggleChip(this)">🌦 Terrain / weather</span>
+              <span class="reason-chip hax" onclick="toggleChip(this)">🎲 Hax</span>
+              <span class="reason-chip" onclick="toggleChip(this)">🤦 Misplay</span>
+            </div>
+          </div>
+
+          <!-- Key turn note -->
+          <div class="modal-section-label" style="margin-top:14px;">Key turn note <span style="color:#bbb;font-weight:400;text-transform:none;font-size:0.65rem;">optional</span></div>
+          <div class="turn-field">
+            <textarea placeholder="e.g. Turn 3 — I thought Surf would OHKO Calyrex but it survived. Should have used Water Spout.">Turn 3 — didn't account for Trick Room flipping speed. Should have led Blastoise + Regieleki instead.</textarea>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary">Skip</button>
+          <button class="btn-primary" onclick="show('v3')">Save &amp; Record →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     VIEW 3 — Match History tab
+═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="v3">
+  <div class="history-shell">
+    <div class="annotation">
+      <strong>Screen 3 of 4 — Match History tab.</strong>
+      A new tab alongside Offense / Defense / Speed. Shows all saved matches, patterns in losses,
+      and lets you filter by opponent Pokémon. Clicking a row restores the full analysis snapshot.
+    </div>
+
+    <div class="history-header">
+      <h2>📋 Match History</h2>
+      <div class="history-filters">
+        <span class="filter-chip active">All</span>
+        <span class="filter-chip">Losses</span>
+        <span class="filter-chip">Wins</span>
+        <span class="filter-chip" style="display:flex;align-items:center;gap:4px;">
+          Opponent: <strong>Calyrex-Shadow ×</strong>
+        </span>
+        <span class="filter-chip">Export JSON</span>
+      </div>
+    </div>
+
+    <!-- Summary pills -->
+    <div class="summary-bar">
+      <div class="summary-pill win-pill"><span class="val">7</span><span class="lbl">Wins</span></div>
+      <div class="summary-pill loss-pill"><span class="val">5</span><span class="lbl">Losses</span></div>
+
+      <div class="summary-pill"><span class="val" style="color:#c07000;">54%</span><span class="lbl">Win rate</span></div>
+    </div>
+
+    <!-- Loss pattern -->
+    <div class="pattern-section">
+      <div class="pattern-title">Loss patterns (5 losses)</div>
+      <div class="pattern-bars">
+        <div class="pattern-row">
+          <div class="pattern-label">KO range miss</div>
+          <div class="pattern-track"><div class="pattern-fill" style="width:80%;background:#c07000;"></div></div>
+          <div class="pattern-count">4</div>
+        </div>
+        <div class="pattern-row">
+          <div class="pattern-label">Speed control</div>
+          <div class="pattern-track"><div class="pattern-fill" style="width:60%;background:#1a6aaa;"></div></div>
+          <div class="pattern-count">3</div>
+        </div>
+        <div class="pattern-row">
+          <div class="pattern-label">Lead / setup</div>
+          <div class="pattern-track"><div class="pattern-fill" style="width:40%;background:#3a8a3a;"></div></div>
+          <div class="pattern-count">2</div>
+        </div>
+        <div class="pattern-row">
+          <div class="pattern-label">Matchup</div>
+          <div class="pattern-track"><div class="pattern-fill" style="width:20%;background:#c03030;"></div></div>
+          <div class="pattern-count">1</div>
+        </div>
+        <div class="pattern-row">
+          <div class="pattern-label">Hax</div>
+          <div class="pattern-track"><div class="pattern-fill" style="width:20%;background:#6a3a9a;"></div></div>
+          <div class="pattern-count">1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Match list -->
+    <div class="match-list">
+
+      <!-- Today — loss -->
+      <div class="match-card">
+        <div class="match-outcome-dot loss">L</div>
+        <div class="match-info">
+          <div class="match-opponents">
+            <span class="match-poke-chip flagged">Calyrex-Shadow ⚠</span>
+            <span class="match-poke-chip">Incineroar</span>
+          </div>
+          <div class="match-reason-chips">
+            <span class="match-reason-chip primary">📊 KO range miss</span>
+            <span class="match-reason-chip primary">🎯 Lead / setup</span>
+          </div>
+          <div class="match-note">"Turn 3 — didn't account for Trick Room flipping speed"</div>
+        </div>
+        <div class="match-meta">Today<br><span style="color:#ddd;">Rain</span></div>
+      </div>
+
+      <!-- Yesterday — win -->
+      <div class="match-card">
+        <div class="match-outcome-dot win">W</div>
+        <div class="match-info">
+          <div class="match-opponents">
+            <span class="match-poke-chip">Dragapult</span>
+            <span class="match-poke-chip">Landorus-T</span>
+            <span class="match-poke-chip">Urshifu-R</span>
+          </div>
+          <div class="match-reason-chips">
+            <span class="match-reason-chip" style="color:#2a7a2a;background:#e8f5e8;">Clean win ✓</span>
+          </div>
+        </div>
+        <div class="match-meta">Yesterday<br><span style="color:#ddd;">—</span></div>
+      </div>
+
+      <!-- 2 days ago — loss -->
+      <div class="match-card">
+        <div class="match-outcome-dot loss">L</div>
+        <div class="match-info">
+          <div class="match-opponents">
+            <span class="match-poke-chip flagged">Calyrex-Shadow ⚠</span>
+            <span class="match-poke-chip">Flutter Mane</span>
+          </div>
+          <div class="match-reason-chips">
+            <span class="match-reason-chip primary">⚡ Speed control</span>
+            <span class="match-reason-chip primary">📊 KO range miss</span>
+          </div>
+          <div class="match-note">"Forgot Flutter Mane outspeeds my Blastoise by 4 points"</div>
+        </div>
+        <div class="match-meta">2d ago<br><span style="color:#e6c800;font-size:0.62rem;">Elec terrain</span></div>
+      </div>
+
+      <!-- 3 days — win -->
+      <div class="match-card">
+        <div class="match-outcome-dot win">W</div>
+        <div class="match-info">
+          <div class="match-opponents">
+            <span class="match-poke-chip">Miraidon</span>
+            <span class="match-poke-chip">Iron Hands</span>
+          </div>
+          <div class="match-reason-chips">
+            <span class="match-reason-chip" style="color:#2a7a2a;background:#e8f5e8;">Clean win ✓</span>
+          </div>
+        </div>
+        <div class="match-meta">3d ago</div>
+      </div>
+
+      <!-- 4 days — loss -->
+      <div class="match-card">
+        <div class="match-outcome-dot loss">L</div>
+        <div class="match-info">
+          <div class="match-opponents">
+            <span class="match-poke-chip">Koraidon</span>
+            <span class="match-poke-chip flagged">Calyrex-Shadow ⚠</span>
+            <span class="match-poke-chip">Incineroar</span>
+          </div>
+          <div class="match-reason-chips">
+            <span class="match-reason-chip primary">⚡ Speed control</span>
+            <span class="match-reason-chip">🎲 Hax</span>
+          </div>
+          <div class="match-note">"Crit on turn 1 wiped my Blastoise before I could set up"</div>
+        </div>
+        <div class="match-meta">4d ago<br><span style="color:#e05080;font-size:0.62rem;">Psych terrain</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     VIEW 4 — Scout callout in threat matrix
+═══════════════════════════════════════════════════════════════════ -->
+<div class="view" id="v4">
+  <div class="threat-matrix-mock">
+    <div class="annotation">
+      <strong>Screen 4 of 4 — Scout callout in threat matrix.</strong>
+      When an opponent Pokémon you've lost to before appears in the Offense or Defense matrix, a red ⚠ badge
+      shows next to their name. Hover it to see your loss history and the patterns you tagged.
+    </div>
+
+    <div class="threat-section-label">Offense — Blastoise-Mega vs Opponents</div>
+
+    <div class="threat-row header">
+      <div>Move</div>
+      <div class="threat-cell">Dragapult</div>
+      <div class="threat-cell">
+        Calyrex-Shadow
+        <div style="margin-top:3px;">
+          <div class="scout-badge">
+            ⚠ Beat you 3×
+            <div class="scout-tooltip">
+              <strong>Calyrex-Shadow</strong> — 3 recorded losses<br><br>
+              Common reasons:
+              <div class="scout-reasons">
+                <span class="scout-reason-tag">📊 KO range miss ×2</span>
+                <span class="scout-reason-tag">⚡ Speed control ×2</span>
+              </div>
+              <br>Last note: "Didn't account for Trick Room"
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="threat-cell">Incineroar</div>
+      <div class="threat-cell">Flutter Mane</div>
+    </div>
+
+    <div class="threat-row">
+      <div class="threat-name">Surf</div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:72%;background:linear-gradient(90deg,#4a90e2,#4a90e2cc);"></div></div>
+          <div class="threat-pct">58–72%</div>
+        </div>
+        <span class="threat-ko ko-2hko">2HKO</span>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:51%;background:linear-gradient(90deg,#4a90e2,#4a90e2cc);"></div></div>
+          <div class="threat-pct">40–51%</div>
+        </div>
+        <span class="threat-ko ko-2hko">2HKO</span>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:30%;background:linear-gradient(90deg,#aaa,#aaa88);"></div></div>
+          <div class="threat-pct">22–30%</div>
+        </div>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:88%;background:linear-gradient(90deg,#4a90e2,#4a90e2cc);"></div></div>
+          <div class="threat-pct">74–88%</div>
+        </div>
+        <span class="threat-ko ko-2hko">2HKO</span>
+      </div>
+    </div>
+
+    <div class="threat-row">
+      <div class="threat-name">Ice Beam</div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:100%;background:linear-gradient(90deg,#2a8a2a,#2a8a2acc);"></div></div>
+          <div class="threat-pct">91–107%</div>
+        </div>
+        <span class="threat-ko ko-ohko">OHKO ✓</span>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:34%;background:linear-gradient(90deg,#4a90e2,#4a90e2cc);"></div></div>
+          <div class="threat-pct">28–34%</div>
+        </div>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:15%;background:linear-gradient(90deg,#aaa,#aaa88);"></div></div>
+          <div class="threat-pct">11–15%</div>
+        </div>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:55%;background:linear-gradient(90deg,#4a90e2,#4a90e2cc);"></div></div>
+          <div class="threat-pct">43–55%</div>
+        </div>
+        <span class="threat-ko ko-2hko">2HKO</span>
+      </div>
+    </div>
+
+    <div class="threat-row">
+      <div class="threat-name">Focus Blast</div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:22%;background:linear-gradient(90deg,#aaa,#aaa88);"></div></div>
+          <div class="threat-pct">16–22%</div>
+        </div>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:15%;background:linear-gradient(90deg,#aaa,#aaa88);"></div></div>
+          <div class="threat-pct">11–15%</div>
+        </div>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:100%;background:linear-gradient(90deg,#2a8a2a,#2a8a2acc);"></div></div>
+          <div class="threat-pct">88–105%</div>
+        </div>
+        <span class="threat-ko ko-ohko">OHKO ✓</span>
+      </div>
+      <div class="threat-cell">
+        <div class="threat-bar-wrap">
+          <div class="threat-bar-track"><div class="threat-bar-fill" style="width:10%;background:linear-gradient(90deg,#aaa,#aaa88);"></div></div>
+          <div class="threat-pct">7–10%</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;font-size:0.72rem;color:#aaa;padding:12px;background:#f9f9f9;border:1px solid #eee;border-radius:5px;line-height:1.6;">
+      <strong>How the scout badge works:</strong> When you run an analysis and any of the opponent slots matches a Pokémon in your match history (even with 1+ loss), the red ⚠ badge appears in the column header. Hovering reveals the count, the most common loss-reason tags you applied, and the most recent note. It's passive — you don't need to do anything extra.
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal (for view 1 trigger) ──────────────────────────────── -->
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Save Match</div>
+        <div class="modal-subtitle">How did it go?</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Snapshot (auto-captured)</div>
+      <div class="snapshot-strip">
+        <div><strong>Opponents:</strong> Calyrex-Shadow, Incineroar</div>
+        <div><strong>Field:</strong> <span class="snap-pill">Rain</span></div>
+        <div><strong>Moves seen:</strong> <span class="snap-pill">Astral Barrage</span> <span class="snap-pill">Trick Room</span></div>
+      </div>
+      <div class="modal-section-label">Outcome</div>
+      <div class="outcome-row">
+        <button class="outcome-btn win" onclick="selectOutcome(this,'win')"><span class="emoji">🏆</span>Win</button>
+        <button class="outcome-btn loss selected" onclick="selectOutcome(this,'loss')"><span class="emoji">💀</span>Loss</button>
+      </div>
+      <div class="modal-section-label">Why did you lose?</div>
+      <div class="reason-chips">
+        <span class="reason-chip range selected" onclick="toggleChip(this)">📊 KO range miss</span>
+        <span class="reason-chip speed" onclick="toggleChip(this)">⚡ Speed control</span>
+        <span class="reason-chip lead" onclick="toggleChip(this)">🎯 Lead / setup</span>
+        <span class="reason-chip" onclick="toggleChip(this)">🎭 Move choice</span>
+        <span class="reason-chip" onclick="toggleChip(this)">🔍 Threat not scouted</span>
+        <span class="reason-chip matchup" onclick="toggleChip(this)">⚔️ Matchup</span>
+        <span class="reason-chip" onclick="toggleChip(this)">🌦 Terrain / weather</span>
+        <span class="reason-chip hax" onclick="toggleChip(this)">🎲 Hax</span>
+        <span class="reason-chip" onclick="toggleChip(this)">🤦 Misplay</span>
+      </div>
+      <div class="modal-section-label" style="margin-top:14px;">Key turn note</div>
+      <div class="turn-field">
+        <textarea placeholder="e.g. Turn 3 — thought Surf would OHKO but it survived. Should have used Water Spout."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Skip</button>
+      <button class="btn-primary" onclick="closeModal()">Save &amp; Record</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.mock-nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const idx = ['v1','v2','v3','v4'].indexOf(id);
+    document.querySelectorAll('.mock-nav-btn')[idx].classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function openModal() {
+    document.getElementById('modal').classList.add('open');
+  }
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  function selectOutcome(btn, type) {
+    btn.closest('.outcome-row').querySelectorAll('.outcome-btn').forEach(b => {
+      b.classList.remove('selected');
+    });
+    btn.classList.add('selected');
+    const reasonSection = btn.closest('.modal-body').querySelector('#loss-reasons-section') ??
+                          btn.closest('.modal-body').querySelector('.reason-chips')?.parentElement;
+    // toggle reasons section visibility
+    const chips = btn.closest('.modal-body').querySelectorAll('.reason-chips, .modal-section-label');
+  }
+
+  function toggleChip(chip) {
+    chip.classList.toggle('selected');
+  }
+</script>
+</body>
+</html>

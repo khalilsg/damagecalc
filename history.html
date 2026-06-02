@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Match History — K Calc</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .page-header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    .back-link {
+      font-size: 0.78rem;
+      color: #888;
+      text-decoration: none;
+    }
+    .back-link:hover { color: #333; }
+
+    /* ── Action row ── */
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .filter-chip {
+      background: #eee;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #555;
+      transition: background 0.12s;
+    }
+    .filter-chip:hover { background: #e0e0e0; }
+    .filter-chip.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .action-btn {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px 12px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #555;
+      margin-left: auto;
+    }
+    .action-btn:hover { background: #f0f0f0; }
+    .manage-btn { margin-left: 0; }
+
+    /* ── Stats ── */
+    .stats-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 10px 18px;
+      min-width: 80px;
+      text-align: center;
+    }
+    .stat-pill .val {
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: block;
+      line-height: 1.1;
+    }
+    .stat-pill .lbl {
+      font-size: 0.62rem;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .stat-pill.wins   .val { color: #2a8a2a; }
+    .stat-pill.losses .val { color: #c03030; }
+    .stat-pill.rate   .val { color: #c07000; }
+
+    /* ── Pattern bars ── */
+    .section-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #aaa;
+      margin-bottom: 10px;
+      margin-top: 6px;
+    }
+    .pattern-bars { display: flex; flex-direction: column; gap: 7px; margin-bottom: 24px; }
+    .pattern-row { display: flex; align-items: center; gap: 10px; }
+    .pattern-label { font-size: 0.72rem; color: #555; width: 130px; flex-shrink: 0; text-align: right; }
+    .pattern-track {
+      flex: 1;
+      height: 12px;
+      background: #eee;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .pattern-fill {
+      height: 100%;
+      background: #c03030;
+      border-radius: 6px;
+      transition: width 0.35s ease;
+    }
+    .pattern-count { font-size: 0.72rem; color: #888; width: 20px; text-align: left; }
+
+    /* ── Match list ── */
+    .match-list { display: flex; flex-direction: column; gap: 8px; max-width: 780px; }
+
+    .match-card {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .match-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .match-dot.win  { background: #e8f5e8; color: #2a7a2a; }
+    .match-dot.loss { background: #fde8e8; color: #b02020; }
+
+    .match-info { flex: 1; min-width: 0; }
+
+    .match-teams-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+    }
+    .match-my-team {
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+    .match-vs { font-size: 0.68rem; color: #bbb; }
+    .match-their-team {
+      font-size: 0.78rem;
+      color: #666;
+    }
+
+    .match-poke-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 5px;
+    }
+    .match-poke-chip {
+      background: #f0f0f0;
+      border: 1px solid #e0e0e0;
+      border-radius: 3px;
+      padding: 2px 7px;
+      font-size: 0.68rem;
+      color: #555;
+    }
+
+    .match-reason-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+    .match-reason-tag {
+      background: #1a1a1a;
+      color: #fff;
+      border-radius: 10px;
+      padding: 2px 9px;
+      font-size: 0.64rem;
+      font-weight: 500;
+    }
+
+    .match-note {
+      font-size: 0.72rem;
+      color: #777;
+      font-style: italic;
+      margin-top: 2px;
+    }
+
+    .match-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .match-date { font-size: 0.65rem; color: #bbb; }
+    .match-delete-btn {
+      background: none;
+      border: 1px solid #eee;
+      color: #ccc;
+      border-radius: 3px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .match-delete-btn:hover { border-color: #e0a0a0; color: #c00; background: #fff0f0; }
+
+    /* ── Manage reasons panel ── */
+    #reasons-panel {
+      display: none;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      max-width: 460px;
+    }
+    .reason-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.8rem;
+    }
+    .reason-del-btn {
+      background: none;
+      border: 1px solid #eee;
+      color: #bbb;
+      border-radius: 3px;
+      padding: 2px 8px;
+      font-size: 0.68rem;
+      cursor: pointer;
+    }
+    .reason-del-btn:hover { border-color: #e0a0a0; color: #c00; background: #fff0f0; }
+    .reason-add-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .reason-add-input {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px 8px;
+      font-family: inherit;
+      font-size: 0.8rem;
+    }
+    .reason-add-input:focus { outline: none; border-color: #1a1a1a; }
+    .reason-add-btn {
+      background: #1a1a1a;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      padding: 5px 14px;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+    .reason-add-btn:hover { background: #333; }
+    .reason-reset-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 0.68rem;
+      cursor: pointer;
+      padding: 8px 0 0;
+      display: block;
+    }
+    .reason-reset-btn:hover { color: #555; }
+
+    /* ── Empty state ── */
+    .empty-note {
+      font-size: 0.8rem;
+      color: #bbb;
+      padding: 12px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <h1>📋 MATCH HISTORY</h1>
+    <a class="back-link" href="/damagecalc/">← Back to K Calc</a>
+  </div>
+
+  <div class="action-row">
+    <button class="filter-chip active" id="filter-all">All</button>
+    <button class="filter-chip"        id="filter-win">Wins</button>
+    <button class="filter-chip"        id="filter-loss">Losses</button>
+    <button class="action-btn manage-btn" id="manage-reasons-btn">⚙ Manage Reasons</button>
+    <button class="action-btn"            id="export-btn">↓ Export TSV</button>
+  </div>
+
+  <div id="reasons-panel">
+    <div class="section-title">Loss Reasons</div>
+    <div id="reasons-list"></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-pill wins">
+      <span class="val" id="stat-wins">—</span>
+      <span class="lbl">Wins</span>
+    </div>
+    <div class="stat-pill losses">
+      <span class="val" id="stat-losses">—</span>
+      <span class="lbl">Losses</span>
+    </div>
+    <div class="stat-pill rate">
+      <span class="val" id="stat-winrate">—</span>
+      <span class="lbl">Win rate</span>
+    </div>
+  </div>
+
+  <div class="section-title">Loss patterns</div>
+  <div class="pattern-bars" id="pattern-bars"></div>
+
+  <div class="section-title">Matches</div>
+  <div class="match-list" id="match-list"></div>
+
+  <script type="module" src="/src/historyPage.js"></script>
+</body>
+</html>

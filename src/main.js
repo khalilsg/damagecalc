@@ -14,8 +14,22 @@ import { renderMatchupLookup } from './ui/matchupLookup.js';
 import { initLeadSelectorTab } from './ui/leadSelector.js';
 import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
 import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
+import { openSaveMatchModal } from './ui/saveMatchModal.js';
+import { buildSnapshot } from './matchHistory.js';
 
 preloadStats();
+
+// ── Save Match — listen for button click from sidebar ─────────────────────────
+document.getElementById('battle-tracker').addEventListener('save-match-click', async () => {
+  const snapshot = buildSnapshot(getState(), currentPlayerSets);
+  await openSaveMatchModal(snapshot);
+  // Re-render sidebar so match count badge updates
+  renderSidebarTracker(
+    document.getElementById('battle-tracker'),
+    getState(),
+    currentPlayerSets,
+  );
+});
 
 let analysisData      = null;
 let threatMatrix      = null;   // from Lead Selector — shown at top of Summary

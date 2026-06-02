@@ -8,6 +8,7 @@ import {
   removeMyPokemon, removeOpponentPokemon,
 } from '../battleTracker.js';
 import { computeIncomingMove, computeDefenseExpGrid } from '../calcEngine.js';
+import { loadHistory } from '../matchHistory.js';
 
 const STATS = [
   { label: 'Atk', key: 'atk' },
@@ -57,6 +58,23 @@ export function renderSidebarTracker(container, state, playerSets) {
   for (const [name, stages] of Object.entries(state.opponentStages)) {
     container.appendChild(makeOpponentCard(name, stages, state.opponentMoves[name] ?? [], playerSets, state));
   }
+
+  // ── Save Match zone ─────────────────────────────────────────────
+  const saveZone = el('div', 'save-match-zone');
+  const saveBtn  = el('button', 'save-match-btn');
+  saveBtn.innerHTML = '💾 Save Match';
+  saveBtn.addEventListener('click', () => {
+    container.dispatchEvent(new CustomEvent('save-match-click', { bubbles: true }));
+  });
+  saveZone.appendChild(saveBtn);
+
+  const count = loadHistory().length;
+  if (count > 0) {
+    const countEl = el('div', 'save-match-count');
+    countEl.textContent = `${count} match${count === 1 ? '' : 'es'} saved`;
+    saveZone.appendChild(countEl);
+  }
+  container.appendChild(saveZone);
 }
 
 function makeFieldControls(state) {
