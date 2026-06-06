@@ -460,12 +460,164 @@ async function runBenchmark() {
   }
 }
 
+// ── Team Benchmark ────────────────────────────────────────────────────────────
+
+async function runTeamBenchmark(teamText) {
+  const errorEl = document.getElementById('team-error');
+  const btn     = document.getElementById('team-bench-btn');
+  errorEl.textContent = '';
+
+  let sets;
+  try {
+    sets = parseSets(teamText);
+  } catch (e) {
+    errorEl.textContent = `Parse error: ${e.message}`;
+    return;
+  }
+
+  if (sets.length === 0) {
+    errorEl.textContent = 'No Pokémon found. Paste a valid Showdown team.';
+    return;
+  }
+
+  btn.textContent = 'RUNNING…';
+  btn.disabled    = true;
+
+  try {
+    const format    = document.getElementById('format-select').value;
+    const topN      = Math.max(1, Math.min(50, parseInt(document.getElementById('top-n').value, 10) || 20));
+    const chaosData = await loadChaosData(format);
+    const opponents = parseOpponents(chaosData, topN);
+
+    const monTabsEl   = document.getElementById('pb-mon-tabs');
+    const monPanelsEl = document.getElementById('pb-mon-panels');
+    monTabsEl.innerHTML   = '';
+    monPanelsEl.innerHTML = '';
+
+    const tabBtns  = [];
+    const panelEls = [];
+    const STAT_KEY = { Atk: 'atk', Def: 'def', SpA: 'spa', SpD: 'spd', Spe: 'spe', HP: 'hp' };
+
+    for (const set of sets) {
+      const resolvedName = resolveSpecies(set.name);
+      if (!resolvedName) continue;
+
+      // Moves: from set, fall back to chaos data
+      let moves = (set.moves ?? []).filter(m => isMoveUsable(m));
+      if (moves.length === 0) {
+        const entry = getMonEntry(chaosData, resolvedName);
+        if (entry?.Moves) {
+          moves = Object.entries(entry.Moves)
+            .sort((a, b) => b[1] - a[1])
+            .map(([m]) => m)
+            .filter(m => isMoveUsable(m))
+            .slice(0, 4);
+        }
+      }
+
+      // Boost array → object
+      const boosts = {};
+      for (const b of (set.boosts ?? [])) {
+        boosts[STAT_KEY[b.stat] ?? b.stat.toLowerCase()] = b.modifier;
+      }
+
+      const userSpec = {
+        resolvedName,
+        nature: set.nature ?? 'Serious',
+        evs:    set.evs    ?? { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+        item:   set.item,
+        moves,
+        boosts,
+      };
+
+      const offenseResults = runOffensiveCheck(userSpec, opponents);
+      const defenseResults = runDefensiveCheck(userSpec, opponents);
+      const speedResults   = runSpeedAudit(userSpec, opponents);
+
+      // Outer tab button
+      const isFirst = tabBtns.length === 0;
+      const monTab  = el('button', `pb-mon-tab-btn${isFirst ? ' active' : ''}`, resolvedName);
+      monTabsEl.append(monTab);
+      tabBtns.push(monTab);
+
+      // Panel with inner tabs
+      const panel       = el('div', isFirst ? 'pb-mon-panel' : 'pb-mon-panel pb-hidden');
+      const innerTabRow = el('div', 'pb-tabs');
+      const offPanel    = el('div', 'pb-tab-panel active');
+      const defPanel    = el('div', 'pb-tab-panel');
+      const spdPanel    = el('div', 'pb-tab-panel');
+      const innerPanels = [offPanel, defPanel, spdPanel];
+
+      for (const [label, target] of [['Offensive', offPanel], ['Defensive', defPanel], ['Speed Audit', spdPanel]]) {
+        const ib = el('button', `pb-tab-btn${target === offPanel ? ' active' : ''}`, label);
+        ib.addEventListener('click', () => {
+          innerTabRow.querySelectorAll('.pb-tab-btn').forEach(b => b.classList.remove('active'));
+          innerPanels.forEach(p => p.classList.remove('active'));
+          ib.classList.add('active');
+          target.classList.add('active');
+        });
+        innerTabRow.append(ib);
+      }
+
+      renderOffense(offenseResults, offPanel);
+      renderDefense(defenseResults, defPanel);
+      renderSpeed(speedResults,     spdPanel);
+
+      panel.append(innerTabRow, offPanel, defPanel, spdPanel);
+      monPanelsEl.append(panel);
+      panelEls.push(panel);
+
+      monTab.addEventListener('click', () => {
+        tabBtns.forEach(b  => b.classList.remove('active'));
+        panelEls.forEach(p => p.classList.add('pb-hidden'));
+        monTab.classList.add('active');
+        panel.classList.remove('pb-hidden');
+      });
+    }
+
+    if (tabBtns.length === 0) {
+      errorEl.textContent = 'No recognisable Pokémon found. Check spelling and format.';
+      return;
+    }
+
+    document.getElementById('team-results-area').style.display = 'block';
+    document.getElementById('team-results-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (e) {
+    errorEl.textContent = `Error: ${e.message}`;
+    console.error(e);
+  } finally {
+    btn.textContent = 'BENCHMARK TEAM';
+    btn.disabled    = false;
+  }
+}
+
+function initTeamMode() {
+  document.getElementById('team-bench-btn').addEventListener('click', () => {
+    const text = document.getElementById('team-paste-input').value.trim();
+    if (!text) { document.getElementById('team-error').textContent = 'Paste a team first.'; return; }
+    runTeamBenchmark(text);
+  });
+
+  // Pre-fill from ?team= URL param (passed by K Calc "Open in PokéBench" link)
+  const param = new URLSearchParams(location.search).get('team');
+  if (param) {
+    try {
+      const text = decodeURIComponent(escape(atob(param)));
+      document.getElementById('team-paste-input').value = text;
+      // Auto-run after formats are populated
+      setTimeout(() => runTeamBenchmark(text), 150);
+    } catch { /* ignore malformed */ }
+  }
+}
+
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
 initFormats();
 initMonSearch();
 initPasteImport();
 initTabs();
+initTeamMode();
 
 document.getElementById('bench-btn').addEventListener('click', runBenchmark);
 document.getElementById('bench-form').addEventListener('keydown', e => {

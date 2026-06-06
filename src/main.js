@@ -19,6 +19,17 @@ import { buildSnapshot } from './matchHistory.js';
 
 preloadStats();
 
+// ── PokéBench link — encode current team into ?team= param ───────────────────
+document.getElementById('pokebench-link').addEventListener('click', e => {
+  const text = document.getElementById('team-input').value.trim();
+  if (text) {
+    e.preventDefault();
+    const encoded = btoa(unescape(encodeURIComponent(text)));
+    window.open(`./pokebench/?team=${encoded}`, '_blank', 'noopener,noreferrer');
+  }
+  // If no team is entered, the default href="./pokebench/" opens normally
+});
+
 // ── Save Match — listen for button click from sidebar ─────────────────────────
 document.getElementById('battle-tracker').addEventListener('save-match-click', async () => {
   const snapshot = buildSnapshot(getState(), currentPlayerSets);
