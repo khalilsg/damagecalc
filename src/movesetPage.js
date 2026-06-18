@@ -1,26 +1,51 @@
-import { gen, allSpecies } from './calcEngine.js';
-import { getGen9MovesBatch } from './learnsets.js';
+import { gen } from './calcEngine.js';
+import { getChampionsSpeciesIds, getChampionsMovesBatch } from './learnsets.js';
 
-// ── All Gen 9 move names for autocomplete ─────────────────────────────────────
+// ── Champions move names for autocomplete ─────────────────────────────────────
+// Built lazily after the learnsets are loaded.
 
-const ALL_MOVE_NAMES = (() => {
-  const names = [];
+let champMoveNames = null; // sorted display names of all Champions-legal moves
+
+async function ensureMoveNames() {
+  if (champMoveNames) return;
+  // getChampionsMovesBatch over all Champions species gives us every legal move.
+  // We don't call it yet here — it runs on first search. For the autocomplete
+  // we just use gen.moves (which has display names) filtered to recognisable moves.
+  // The autocomplete is a hint; the search validates against Champions learnsets.
+  champMoveNames = [];
   for (const m of gen.moves) {
-    if (m.name && m.name !== '(No Move)') names.push(m.name);
+    if (m.name && m.name !== '(No Move)') champMoveNames.push(m.name);
   }
-  return names.sort();
-})();
+  champMoveNames.sort();
+}
 
 function toMoveId(name) {
   return name.toLowerCase().replace(/[-\s']/g, '');
 }
 
+// ── Champions species list ────────────────────────────────────────────────────
+// Built lazily: {id, name, species} for the 237 Champions-legal Pokémon.
+
+let champSpecies = null;
+
+async function ensureChampionsSpecies() {
+  if (champSpecies) return champSpecies;
+  const ids = await getChampionsSpeciesIds();
+  champSpecies = [];
+  for (const id of ids) {
+    const species = gen.species.get(id);
+    if (!species) continue;
+    champSpecies.push({ id, name: species.name, species });
+  }
+  return champSpecies;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let selectedMoves = [];  // display names
+let selectedMoves = [];
 let sortKey = 'bst';
 let sortAsc  = false;
-let results  = [];       // [{name, types, hp, atk, def, spa, spd, spe, bst}]
+let results  = [];
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
@@ -40,7 +65,7 @@ function initMoveInput() {
 
   function matches(q) {
     const lower = q.toLowerCase();
-    return ALL_MOVE_NAMES.filter(n => n.toLowerCase().includes(lower)).slice(0, 50);
+    return (champMoveNames ?? []).filter(n => n.toLowerCase().includes(lower)).slice(0, 50);
   }
 
   function renderDropdown(q) {
@@ -105,7 +130,7 @@ function renderChips() {
   const area = document.getElementById('move-chips');
   area.innerHTML = '';
   for (const name of selectedMoves) {
-    const chip = el('span', 'ml-chip');
+    const chip  = el('span', 'ml-chip');
     const label = document.createTextNode(name + ' ');
     const btn   = el('button', 'ml-chip-remove');
     btn.textContent = '×';
@@ -129,16 +154,17 @@ async function runSearch() {
 
   if (selectedMoves.length === 0) return;
 
-  btn.textContent = 'LOADING LEARNSETS…';
+  btn.textContent = 'LOADING…';
   btn.disabled    = true;
 
   const moveIds = selectedMoves.map(toMoveId);
 
-  let movesets;
+  let species, movesets;
   try {
-    movesets = await getGen9MovesBatch(allSpecies);
+    species  = await ensureChampionsSpecies();
+    movesets = await getChampionsMovesBatch(species.map(s => s.name));
   } catch (e) {
-    errorEl.textContent = `Failed to load learnset data: ${e.message}`;
+    errorEl.textContent = `Failed to load Champions data: ${e.message}`;
     btn.textContent = 'FIND POKÉMON';
     btn.disabled    = false;
     return;
@@ -148,22 +174,15 @@ async function runSearch() {
   btn.disabled    = false;
 
   results = [];
-  for (const name of allSpecies) {
+  for (const { name, species: s } of species) {
     const moveset = movesets.get(name);
     if (!moveset || !moveIds.every(id => moveset.has(id))) continue;
 
-    const speciesId = name.toLowerCase().replace(/[-\s]/g, '');
-    let species = gen.species.get(speciesId);
-    if (!species) {
-      for (const s of gen.species) { if (s.name === name) { species = s; break; } }
-    }
-    if (!species) continue;
-
-    const bs  = species.baseStats;
+    const bs  = s.baseStats;
     const bst = bs.hp + bs.atk + bs.def + bs.spa + bs.spd + bs.spe;
     results.push({
       name,
-      types: species.types ?? [],
+      types: s.types ?? [],
       hp: bs.hp, atk: bs.atk, def: bs.def,
       spa: bs.spa, spd: bs.spd, spe: bs.spe,
       bst,
@@ -173,9 +192,8 @@ async function runSearch() {
   sortResults();
   renderTable();
 
-  const countEl  = document.getElementById('ml-count');
-  const wrapEl   = document.getElementById('ml-results');
-  countEl.textContent = `${results.length} Pokémon`;
+  document.getElementById('ml-count').textContent = `${results.length} Pokémon`;
+  const wrapEl = document.getElementById('ml-results');
   wrapEl.style.display = 'block';
   wrapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -222,7 +240,7 @@ function renderTable() {
 
   if (results.length === 0) {
     const tr = document.createElement('tr');
-    const td = el('td', 'ml-empty', 'No Pokémon learn all selected moves in Gen 9.');
+    const td = el('td', 'ml-empty', 'No Champions Pokémon learn all selected moves.');
     td.colSpan = 9;
     tr.append(td);
     tbody.append(tr);
@@ -234,8 +252,7 @@ function renderTable() {
   for (const row of results) {
     const tr = document.createElement('tr');
 
-    const nameTd = el('td', 'ml-td ml-td-name', row.name);
-    tr.append(nameTd);
+    tr.append(el('td', 'ml-td ml-td-name', row.name));
 
     const typesTd = el('td', 'ml-td ml-td-types');
     for (const type of row.types) {
@@ -247,7 +264,7 @@ function renderTable() {
 
     for (const key of STAT_KEYS) {
       const sorted = key === sortKey;
-      const cls    = `ml-td ml-td-stat${key === 'bst' ? ' ml-td-bst' : ''}${sorted ? ' ml-td-sorted' : ''}`;
+      const cls = `ml-td ml-td-stat${key === 'bst' ? ' ml-td-bst' : ''}${sorted ? ' ml-td-sorted' : ''}`;
       tr.append(el('td', cls, String(row[key])));
     }
 
@@ -257,18 +274,17 @@ function renderTable() {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
+ensureMoveNames();  // pre-populate autocomplete names
 initMoveInput();
 updateBtn();
 
 document.getElementById('find-btn').addEventListener('click', runSearch);
 document.getElementById('move-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('move-dropdown').querySelectorAll('.ml-dd-active').length === 0) {
+  if (e.key === 'Enter' && !document.querySelector('.ml-dd-active')) {
     if (selectedMoves.length > 0) runSearch();
   }
 });
 
 document.querySelectorAll('.ml-th-sortable').forEach(th => {
-  th.addEventListener('click', () => {
-    if (results.length > 0) applySort(th.dataset.sort);
-  });
+  th.addEventListener('click', () => { if (results.length > 0) applySort(th.dataset.sort); });
 });

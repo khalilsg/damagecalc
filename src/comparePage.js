@@ -1,5 +1,5 @@
 import { gen, resolveSpeciesName, allSpecies } from './calcEngine.js';
-import { getGen9Moves } from './learnsets.js';
+import { getChampionsMoves, getGen9Moves } from './learnsets.js';
 
 function moveDisplayName(id) {
   try { return gen.moves.get(id)?.name ?? id; }
@@ -160,9 +160,10 @@ async function renderMoves(nameA, nameB) {
   gridEl.innerHTML = '';
 
   try {
+    // Use Champions learnsets; fall back to full Gen 9 for non-Champions Pokémon.
     const [movesA, movesB] = await Promise.all([
-      getGen9Moves(nameA),
-      getGen9Moves(nameB),
+      getChampionsMoves(nameA).then(m => m.length ? m : getGen9Moves(nameA)),
+      getChampionsMoves(nameB).then(m => m.length ? m : getGen9Moves(nameB)),
     ]);
 
     const setA = new Set(movesA);
