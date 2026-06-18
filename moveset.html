@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Move Lookup — K Calc</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .page-header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 2px; }
+    .back-link { font-size: 0.78rem; color: #888; text-decoration: none; }
+    .back-link:hover { color: #333; }
+
+    /* ── Form ── */
+    .ml-form {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+
+    .ml-form-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .ml-input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .ml-input-wrap { position: relative; flex: 1; }
+
+    .ml-input {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      background: #fff;
+      color: #1a1a1a;
+      outline: none;
+    }
+    .ml-input:focus { border-color: #555; }
+
+    .ml-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .ml-dropdown.open { display: block; }
+    .ml-dd-item { padding: 6px 12px; font-size: 0.85rem; cursor: pointer; }
+    .ml-dd-item:hover, .ml-dd-active { background: #f0f0f0; }
+
+    /* ── Chips ── */
+    .ml-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+      min-height: 32px;
+    }
+
+    .ml-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .ml-chip-remove {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.65);
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .ml-chip-remove:hover { color: #fff; }
+
+    /* ── Buttons ── */
+    .ml-btn {
+      background: #111;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ml-btn:hover    { background: #333; }
+    .ml-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .ml-error {
+      color: #c0392b;
+      font-size: 0.82rem;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* ── Results ── */
+    #ml-results { max-width: 900px; }
+
+    .ml-results-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .ml-results-header .ml-section-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #aaa;
+    }
+
+    .ml-count {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #555;
+    }
+
+    /* ── Table ── */
+    .ml-table-wrap {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table.ml-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .ml-table th {
+      background: #f8f8f8;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #888;
+      padding: 9px 10px;
+      text-align: left;
+      border-bottom: 1px solid #e5e5e5;
+      white-space: nowrap;
+    }
+
+    .ml-th-sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    .ml-th-sortable:hover { color: #333; background: #f0f0f0; }
+    .ml-th-sortable.active { color: #1a1a1a; }
+
+    .ml-sort-arrow { margin-left: 3px; font-size: 0.6rem; }
+
+    .ml-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: middle;
+    }
+    .ml-table tr:last-child td { border-bottom: none; }
+    .ml-table tr:hover td { background: #fafafa; }
+
+    .ml-td-name {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .ml-td-types { white-space: nowrap; }
+
+    .ml-type-badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #fff;
+      padding: 2px 7px;
+      border-radius: 3px;
+      margin-right: 3px;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.25);
+      letter-spacing: 0.2px;
+    }
+
+    .ml-td-stat {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #555;
+    }
+    .ml-td-stat.ml-td-sorted { color: #1a1a1a; font-weight: 700; }
+
+    .ml-td-bst { font-weight: 700; color: #1a1a1a; }
+    .ml-td-bst.ml-td-sorted { color: #1a1a1a; }
+
+    .ml-empty {
+      padding: 32px;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <h1>MOVE LOOKUP</h1>
+    <a class="back-link" href="/damagecalc/">← Back to K Calc</a>
+  </div>
+
+  <div class="ml-form">
+    <div class="ml-form-label">Add moves — find every Pokémon that learns all of them</div>
+    <div class="ml-input-row">
+      <div class="ml-input-wrap">
+        <input id="move-input" class="ml-input" placeholder="Type a move name…" autocomplete="off" />
+        <div id="move-dropdown" class="ml-dropdown"></div>
+      </div>
+      <button id="find-btn" class="ml-btn" disabled>FIND POKÉMON</button>
+    </div>
+    <div id="move-chips" class="ml-chips"></div>
+    <div id="ml-error" class="ml-error"></div>
+  </div>
+
+  <div id="ml-results" style="display:none">
+    <div class="ml-results-header">
+      <span class="ml-section-title">Results</span>
+      <span id="ml-count" class="ml-count"></span>
+    </div>
+    <div class="ml-table-wrap">
+      <table class="ml-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th class="ml-th-sortable" data-sort="hp">HP <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="atk">Atk <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="def">Def <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="spa">SpA <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="spd">SpD <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="spe">Spe <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable active" data-sort="bst">BST <span class="ml-sort-arrow">▼</span></th>
+          </tr>
+        </thead>
+        <tbody id="ml-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module" src="/src/movesetPage.js"></script>
+</body>
+</html>

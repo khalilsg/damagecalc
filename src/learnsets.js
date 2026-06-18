@@ -75,3 +75,26 @@ export async function getGen9Moves(displayName) {
   result.sort();
   return result;
 }
+
+/**
+ * For each display name in `names`, return a Set of that species' Gen 9 legal
+ * move IDs. Loads learnsets once and processes all names in a single pass —
+ * far more efficient than calling getGen9Moves() for each name individually.
+ * @param {string[]} names  display names (e.g. from allSpecies)
+ * @returns {Promise<Map<string, Set<string>>>}  name → Set of move IDs
+ */
+export async function getGen9MovesBatch(names) {
+  const learnsets = await fetchLearnsets();
+  const result = new Map();
+  for (const name of names) {
+    const id = resolveLearnsetId(name, learnsets);
+    if (!id) { result.set(name, new Set()); continue; }
+    const learnset = learnsets[id]?.learnset ?? {};
+    const moves = new Set();
+    for (const [moveId, codes] of Object.entries(learnset)) {
+      if (codes.some(c => c.startsWith('9'))) moves.add(moveId);
+    }
+    result.set(name, moves);
+  }
+  return result;
+}

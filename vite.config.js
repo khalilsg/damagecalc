@@ -15,6 +15,7 @@ export default defineConfig({
         pokebench: resolve(__dirname, 'pokebench/index.html'),
         history:   resolve(__dirname, 'history.html'),
         compare:   resolve(__dirname, 'compare.html'),
+        moveset:   resolve(__dirname, 'moveset.html'),
       },
     },
   },
