@@ -1,5 +1,5 @@
 import { gen, resolveSpeciesName, allSpecies } from './calcEngine.js';
-import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
+import { getGen9Moves } from './learnsets.js';
 
 function moveDisplayName(id) {
   try { return gen.moves.get(id)?.name ?? id; }
@@ -153,37 +153,24 @@ function renderStats(nameA, nameB) {
 
 // ── Moves ────────────────────────────────────────────────────────────────────
 
-function findEntry(chaosData, name) {
-  if (chaosData.data[name]) return chaosData.data[name];
-  const lower = name.toLowerCase();
-  for (const [key, val] of Object.entries(chaosData.data)) {
-    if (key.toLowerCase() === lower) return val;
-  }
-  return null;
-}
-
-async function renderMoves(nameA, nameB, format) {
+async function renderMoves(nameA, nameB) {
   const headersEl = document.getElementById('cmp-move-headers');
   const gridEl    = document.getElementById('cmp-moves');
-  headersEl.innerHTML = '<div class="cmp-loading" style="grid-column:1/-1">Loading move data…</div>';
+  headersEl.innerHTML = '<div class="cmp-loading" style="grid-column:1/-1">Loading full learnset data…</div>';
   gridEl.innerHTML = '';
 
   try {
-    const chaosData = await loadChaosData(format);
-    const entryA = findEntry(chaosData, nameA);
-    const entryB = findEntry(chaosData, nameB);
+    const [movesA, movesB] = await Promise.all([
+      getGen9Moves(nameA),
+      getGen9Moves(nameB),
+    ]);
 
-    const movesA = Object.keys(entryA?.Moves ?? {});
-    const movesB = Object.keys(entryB?.Moves ?? {});
-    const setA   = new Set(movesA);
-    const setB   = new Set(movesB);
+    const setA = new Set(movesA);
+    const setB = new Set(movesB);
 
-    const sortByUsage = (arr, entry) =>
-      [...arr].sort((a, b) => ((entry?.Moves?.[b] ?? 0) - (entry?.Moves?.[a] ?? 0)));
-
-    const onlyA  = sortByUsage(movesA.filter(m => !setB.has(m)), entryA);
-    const shared = sortByUsage(movesA.filter(m =>  setB.has(m)), entryA);
-    const onlyB  = sortByUsage(movesB.filter(m => !setA.has(m)), entryB);
+    const onlyA  = movesA.filter(m => !setB.has(m));
+    const shared = movesA.filter(m =>  setB.has(m));
+    const onlyB  = movesB.filter(m => !setA.has(m));
 
     // Column headers
     headersEl.innerHTML = '';
@@ -202,26 +189,19 @@ async function renderMoves(nameA, nameB, format) {
     const colShared = el('div', 'cmp-moves-col cmp-col-shared');
     const colB      = el('div', 'cmp-moves-col cmp-col-b');
 
-    function fillCol(col, moves, entry, chipCls) {
-      if (!entry && moves.length === 0) {
-        col.append(el('div', 'cmp-no-data', 'Not in format data'));
-        return;
-      }
+    function fillCol(col, moves, chipCls) {
       if (moves.length === 0) {
         col.append(el('div', 'cmp-no-data', 'None'));
         return;
       }
       for (const move of moves) {
-        const chip = el('span', `cmp-move-chip ${chipCls}`, moveDisplayName(move));
-        const pct  = entry?.Moves?.[move];
-        if (pct != null) chip.title = `${(pct * 100).toFixed(1)}% usage`;
-        col.append(chip);
+        col.append(el('span', `cmp-move-chip ${chipCls}`, moveDisplayName(move)));
       }
     }
 
-    fillCol(colA,      onlyA,  entryA, 'cmp-chip-a');
-    fillCol(colShared, shared, entryA, 'cmp-chip-shared');
-    fillCol(colB,      onlyB,  entryB, 'cmp-chip-b');
+    fillCol(colA,      onlyA,  'cmp-chip-a');
+    fillCol(colShared, shared, 'cmp-chip-shared');
+    fillCol(colB,      onlyB,  'cmp-chip-b');
 
     gridEl.append(colA, colShared, colB);
 
@@ -235,7 +215,6 @@ async function renderMoves(nameA, nameB, format) {
 async function runCompare() {
   const rawA    = document.getElementById('cmp-input-a').value.trim();
   const rawB    = document.getElementById('cmp-input-b').value.trim();
-  const format  = document.getElementById('cmp-format').value;
   const errorEl = document.getElementById('cmp-error');
   const btn     = document.getElementById('cmp-btn');
   errorEl.textContent = '';
@@ -252,7 +231,7 @@ async function runCompare() {
 
   document.getElementById('cmp-results').style.display = 'block';
   renderStats(nameA, nameB);
-  await renderMoves(nameA, nameB, format);
+  await renderMoves(nameA, nameB);
 
   btn.textContent = 'COMPARE';
   btn.disabled    = false;
@@ -261,14 +240,6 @@ async function runCompare() {
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-
-const formatSel = document.getElementById('cmp-format');
-for (const { label, prefix } of KNOWN_FORMATS) {
-  const o = document.createElement('option');
-  o.value       = prefix;
-  o.textContent = label;
-  formatSel.append(o);
-}
 
 initPicker('cmp-input-a', 'cmp-dd-a');
 initPicker('cmp-input-b', 'cmp-dd-b');
