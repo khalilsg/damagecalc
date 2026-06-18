@@ -16,6 +16,7 @@ export default defineConfig({
         history:   resolve(__dirname, 'history.html'),
         compare:   resolve(__dirname, 'compare.html'),
         moveset:   resolve(__dirname, 'moveset.html'),
+        hub:       resolve(__dirname, 'hub.html'),
       },
     },
   },

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>K Calc — Champions Tools</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px 64px;
+    }
+
+    /* ── Masthead ── */
+    .masthead {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .masthead h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #111;
+      margin-bottom: 8px;
+    }
+
+    .masthead p {
+      font-size: 0.85rem;
+      color: #888;
+      letter-spacing: 0.3px;
+    }
+
+    /* ── Grid ── */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    /* ── Card ── */
+    .tool-card {
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 22px 24px 18px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .tool-card:hover {
+      border-color: #bbb;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+      line-height: 1;
+    }
+
+    .card-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: #666;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .card-arrow {
+      margin-top: 16px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #aaa;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .tool-card:hover .card-arrow { color: #555; }
+  </style>
+</head>
+<body>
+
+  <div class="masthead">
+    <h1>K CALC</h1>
+    <p>Champions format tools</p>
+  </div>
+
+  <div class="tool-grid">
+
+    <a class="tool-card" href="./index.html">
+      <div class="card-icon">⚡</div>
+      <div class="card-name">K Calc</div>
+      <div class="card-desc">Damage calculator for the Champions format. Paste your team and pick opponents to see offensive and defensive matchups, speed comparisons, and lead recommendations — updated live as field conditions change.</div>
+      <div class="card-arrow">Open →</div>
+    </a>
+
+    <a class="tool-card" href="./pokebench/">
+      <div class="card-icon">🔬</div>
+      <div class="card-name">PokéBench</div>
+      <div class="card-desc">Benchmark a single Pokémon or a full team against archetype opponents. See offensive KO potential, defensive survivability against common moves, and speed tier comparisons at a glance.</div>
+      <div class="card-arrow">Open →</div>
+    </a>
+
+    <a class="tool-card" href="./compare.html">
+      <div class="card-icon">⚖️</div>
+      <div class="card-name">Compare</div>
+      <div class="card-desc">Pick any two Pokémon to compare their base stats side by side with a butterfly chart. Then see their full Gen 9 movepools split into three columns: moves only A has, moves both share, and moves only B has.</div>
+      <div class="card-arrow">Open →</div>
+    </a>
+
+    <a class="tool-card" href="./moveset.html">
+      <div class="card-icon">🔍</div>
+      <div class="card-name">Move Lookup</div>
+      <div class="card-desc">Add one or more moves and find every Gen 9 Pokémon that can legally learn all of them. Sort the results by any individual stat or base stat total to find the best fit for a given role.</div>
+      <div class="card-arrow">Open →</div>
+    </a>
+
+    <a class="tool-card" href="./history.html">
+      <div class="card-icon">📋</div>
+      <div class="card-name">Match History</div>
+      <div class="card-desc">Review previously saved matches with per-game results and team snapshots. Export your history as a TSV file for further analysis in a spreadsheet.</div>
+      <div class="card-arrow">Open →</div>
+    </a>
+
+  </div>
+
+</body>
+</html>
