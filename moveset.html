@@ -48,6 +48,12 @@
       margin-bottom: 6px;
     }
 
+    .ml-divider {
+      border: none;
+      border-top: 1px solid #f0f0f0;
+      margin: 16px 0;
+    }
+
     .ml-input-row {
       display: flex;
       gap: 8px;
@@ -95,6 +101,7 @@
       margin-bottom: 14px;
       min-height: 32px;
     }
+    .ml-chips:empty { margin-bottom: 0; min-height: 0; }
 
     .ml-chip {
       display: inline-flex;
@@ -107,6 +114,10 @@
       padding: 4px 10px 4px 12px;
       border-radius: 20px;
       white-space: nowrap;
+    }
+
+    .ml-chip.ability-chip {
+      background: #4a3580;
     }
 
     .ml-chip-remove {
@@ -213,11 +224,16 @@
       vertical-align: middle;
     }
     .ml-table tr:last-child td { border-bottom: none; }
-    .ml-table tr:hover td { background: #fafafa; }
+    .ml-table tr.ml-row-clickable { cursor: pointer; }
+    .ml-table tr.ml-row-clickable:hover td { background: #f5f0ff; }
 
     .ml-td-name {
       font-weight: 600;
       white-space: nowrap;
+      color: #2a1a6e;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      text-decoration-color: rgba(74,53,128,0.35);
     }
 
     .ml-td-types { white-space: nowrap; }
@@ -260,15 +276,29 @@
   </div>
 
   <div class="ml-form">
-    <div class="ml-form-label">Add moves — find every Pokémon that learns all of them</div>
+    <div class="ml-form-label">Moves — find every Pokémon that learns all of them</div>
     <div class="ml-input-row">
       <div class="ml-input-wrap">
         <input id="move-input" class="ml-input" placeholder="Type a move name…" autocomplete="off" />
         <div id="move-dropdown" class="ml-dropdown"></div>
       </div>
-      <button id="find-btn" class="ml-btn" disabled>FIND POKÉMON</button>
     </div>
     <div id="move-chips" class="ml-chips"></div>
+
+    <hr class="ml-divider" />
+
+    <div class="ml-form-label">Ability (optional) — also filter by ability</div>
+    <div class="ml-input-row">
+      <div class="ml-input-wrap">
+        <input id="ability-input" class="ml-input" placeholder="Type an ability name…" autocomplete="off" />
+        <div id="ability-dropdown" class="ml-dropdown"></div>
+      </div>
+    </div>
+    <div id="ability-chips" class="ml-chips"></div>
+
+    <div style="margin-top:4px">
+      <button id="find-btn" class="ml-btn" disabled>FIND POKÉMON</button>
+    </div>
     <div id="ml-error" class="ml-error"></div>
   </div>
 

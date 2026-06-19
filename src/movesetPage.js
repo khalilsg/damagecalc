@@ -1,30 +1,7 @@
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMovesBatch } from './learnsets.js';
 
-// ── Champions move names for autocomplete ─────────────────────────────────────
-// Built lazily after the learnsets are loaded.
-
-let champMoveNames = null; // sorted display names of all Champions-legal moves
-
-async function ensureMoveNames() {
-  if (champMoveNames) return;
-  // getChampionsMovesBatch over all Champions species gives us every legal move.
-  // We don't call it yet here — it runs on first search. For the autocomplete
-  // we just use gen.moves (which has display names) filtered to recognisable moves.
-  // The autocomplete is a hint; the search validates against Champions learnsets.
-  champMoveNames = [];
-  for (const m of gen.moves) {
-    if (m.name && m.name !== '(No Move)') champMoveNames.push(m.name);
-  }
-  champMoveNames.sort();
-}
-
-function toMoveId(name) {
-  return name.toLowerCase().replace(/[-\s']/g, '');
-}
-
 // ── Champions species list ────────────────────────────────────────────────────
-// Built lazily: {id, name, species} for the 237 Champions-legal Pokémon.
 
 let champSpecies = null;
 
@@ -40,9 +17,51 @@ async function ensureChampionsSpecies() {
   return champSpecies;
 }
 
+// ── Ability names (from Champions species only) ───────────────────────────────
+
+let champAbilityNames = null;
+
+async function ensureAbilityNames() {
+  if (champAbilityNames) return champAbilityNames;
+  const species = await ensureChampionsSpecies();
+  const set = new Set();
+  for (const { species: s } of species) {
+    for (const name of Object.values(s.abilities ?? {})) {
+      if (name) set.add(name);
+    }
+  }
+  champAbilityNames = [...set].sort();
+  return champAbilityNames;
+}
+
+// ── Move names (for autocomplete hints) ──────────────────────────────────────
+
+let champMoveNames = null;
+
+function ensureMoveNames() {
+  if (champMoveNames) return;
+  champMoveNames = [];
+  for (const m of gen.moves) {
+    if (m.name && m.name !== '(No Move)') champMoveNames.push(m.name);
+  }
+  champMoveNames.sort();
+}
+
+function toMoveId(name) {
+  return name.toLowerCase().replace(/[-\s']/g, '');
+}
+
+// ── Serebii URL ───────────────────────────────────────────────────────────────
+
+function serebiiUrl(name) {
+  // "Blastoise-Mega" → "blastoise", "Tapu Koko" → "tapukoko"
+  return `https://www.serebii.net/pokedex-champions/${name.toLowerCase().split('-')[0].replace(/\s/g, '')}/`;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let selectedMoves = [];
+let selectedMoves   = [];
+let selectedAbility = null;
 let sortKey = 'bst';
 let sortAsc  = false;
 let results  = [];
@@ -56,16 +75,17 @@ function el(tag, cls, text) {
   return e;
 }
 
-// ── Move autocomplete ─────────────────────────────────────────────────────────
+// ── Generic autocomplete ──────────────────────────────────────────────────────
 
-function initMoveInput() {
-  const input    = document.getElementById('move-input');
-  const dropdown = document.getElementById('move-dropdown');
+function initAutocomplete({ inputId, dropdownId, getNames, onPick, maxResults = 50 }) {
+  const input    = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
   let items = [], activeIdx = -1;
 
   function matches(q) {
     const lower = q.toLowerCase();
-    return (champMoveNames ?? []).filter(n => n.toLowerCase().includes(lower)).slice(0, 50);
+    const names = getNames();
+    return (names ?? []).filter(n => n.toLowerCase().includes(lower)).slice(0, maxResults);
   }
 
   function renderDropdown(q) {
@@ -75,7 +95,7 @@ function initMoveInput() {
     if (!hits.length || !q) { dropdown.classList.remove('open'); return; }
     for (const name of hits) {
       const item = el('div', 'ml-dd-item', name);
-      item.addEventListener('mousedown', e => { e.preventDefault(); pickMove(name); });
+      item.addEventListener('mousedown', e => { e.preventDefault(); pick(name); });
       dropdown.append(item);
       items.push(item);
     }
@@ -89,11 +109,11 @@ function initMoveInput() {
     items[activeIdx]?.scrollIntoView({ block: 'nearest' });
   }
 
-  function pickMove(name) {
+  function pick(name) {
     input.value = '';
     dropdown.classList.remove('open');
     items = []; activeIdx = -1;
-    addMove(name);
+    onPick(name);
   }
 
   input.addEventListener('input',  () => renderDropdown(input.value));
@@ -104,45 +124,74 @@ function initMoveInput() {
     else if (e.key === 'ArrowUp')   { e.preventDefault(); setActive(activeIdx - 1); }
     else if (e.key === 'Enter') {
       e.preventDefault();
-      if (activeIdx >= 0) pickMove(items[activeIdx].textContent);
-      else { const hits = matches(input.value); if (hits[0]) pickMove(hits[0]); }
+      if (activeIdx >= 0) pick(items[activeIdx].textContent);
+      else { const hits = matches(input.value); if (hits[0]) pick(hits[0]); }
     }
     else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
   });
 }
 
-// ── Chips ─────────────────────────────────────────────────────────────────────
+// ── Move chips ────────────────────────────────────────────────────────────────
 
 function addMove(name) {
   if (selectedMoves.includes(name)) return;
   selectedMoves.push(name);
-  renderChips();
+  renderMoveChips();
   updateBtn();
 }
 
 function removeMove(name) {
   selectedMoves = selectedMoves.filter(m => m !== name);
-  renderChips();
+  renderMoveChips();
   updateBtn();
 }
 
-function renderChips() {
+function renderMoveChips() {
   const area = document.getElementById('move-chips');
   area.innerHTML = '';
   for (const name of selectedMoves) {
-    const chip  = el('span', 'ml-chip');
-    const label = document.createTextNode(name + ' ');
-    const btn   = el('button', 'ml-chip-remove');
+    const chip = el('span', 'ml-chip');
+    chip.append(document.createTextNode(name + ' '));
+    const btn = el('button', 'ml-chip-remove');
     btn.textContent = '×';
     btn.title = 'Remove';
     btn.addEventListener('click', () => removeMove(name));
-    chip.append(label, btn);
+    chip.append(btn);
     area.append(chip);
   }
 }
 
+// ── Ability chip (single selection) ──────────────────────────────────────────
+
+function setAbility(name) {
+  selectedAbility = name;
+  renderAbilityChip();
+  updateBtn();
+}
+
+function clearAbility() {
+  selectedAbility = null;
+  renderAbilityChip();
+  updateBtn();
+}
+
+function renderAbilityChip() {
+  const area = document.getElementById('ability-chips');
+  area.innerHTML = '';
+  if (!selectedAbility) return;
+  const chip = el('span', 'ml-chip ability-chip');
+  chip.append(document.createTextNode(selectedAbility + ' '));
+  const btn = el('button', 'ml-chip-remove');
+  btn.textContent = '×';
+  btn.title = 'Remove';
+  btn.addEventListener('click', clearAbility);
+  chip.append(btn);
+  area.append(chip);
+}
+
 function updateBtn() {
-  document.getElementById('find-btn').disabled = selectedMoves.length === 0;
+  document.getElementById('find-btn').disabled =
+    selectedMoves.length === 0 && !selectedAbility;
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -152,7 +201,7 @@ async function runSearch() {
   const errorEl = document.getElementById('ml-error');
   errorEl.textContent = '';
 
-  if (selectedMoves.length === 0) return;
+  if (selectedMoves.length === 0 && !selectedAbility) return;
 
   btn.textContent = 'LOADING…';
   btn.disabled    = true;
@@ -161,8 +210,10 @@ async function runSearch() {
 
   let species, movesets;
   try {
-    species  = await ensureChampionsSpecies();
-    movesets = await getChampionsMovesBatch(species.map(s => s.name));
+    species = await ensureChampionsSpecies();
+    if (selectedMoves.length > 0) {
+      movesets = await getChampionsMovesBatch(species.map(s => s.name));
+    }
   } catch (e) {
     errorEl.textContent = `Failed to load Champions data: ${e.message}`;
     btn.textContent = 'FIND POKÉMON';
@@ -175,8 +226,17 @@ async function runSearch() {
 
   results = [];
   for (const { name, species: s } of species) {
-    const moveset = movesets.get(name);
-    if (!moveset || !moveIds.every(id => moveset.has(id))) continue;
+    // Ability filter
+    if (selectedAbility) {
+      const abilities = Object.values(s.abilities ?? {}).filter(Boolean);
+      if (!abilities.includes(selectedAbility)) continue;
+    }
+
+    // Move filter
+    if (moveIds.length > 0) {
+      const moveset = movesets?.get(name);
+      if (!moveset || !moveIds.every(id => moveset.has(id))) continue;
+    }
 
     const bs  = s.baseStats;
     const bst = bs.hp + bs.atk + bs.def + bs.spa + bs.spd + bs.spe;
@@ -240,7 +300,7 @@ function renderTable() {
 
   if (results.length === 0) {
     const tr = document.createElement('tr');
-    const td = el('td', 'ml-empty', 'No Champions Pokémon learn all selected moves.');
+    const td = el('td', 'ml-empty', 'No Champions Pokémon match the selected filters.');
     td.colSpan = 9;
     tr.append(td);
     tbody.append(tr);
@@ -251,6 +311,9 @@ function renderTable() {
 
   for (const row of results) {
     const tr = document.createElement('tr');
+    tr.className = 'ml-row-clickable';
+    tr.title     = `Open ${row.name} on Serebii`;
+    tr.addEventListener('click', () => window.open(serebiiUrl(row.name), '_blank', 'noopener'));
 
     tr.append(el('td', 'ml-td ml-td-name', row.name));
 
@@ -274,14 +337,35 @@ function renderTable() {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
-ensureMoveNames();  // pre-populate autocomplete names
-initMoveInput();
+ensureMoveNames();
+ensureAbilityNames(); // pre-fetch so autocomplete is fast
+
+initAutocomplete({
+  inputId:    'move-input',
+  dropdownId: 'move-dropdown',
+  getNames:   () => champMoveNames,
+  onPick:     addMove,
+});
+
+initAutocomplete({
+  inputId:    'ability-input',
+  dropdownId: 'ability-dropdown',
+  getNames:   () => champAbilityNames,
+  onPick:     setAbility,
+  maxResults: 30,
+});
+
 updateBtn();
 
 document.getElementById('find-btn').addEventListener('click', runSearch);
 document.getElementById('move-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !document.querySelector('.ml-dd-active')) {
-    if (selectedMoves.length > 0) runSearch();
+  if (e.key === 'Enter' && !document.querySelector('#move-dropdown .ml-dd-active')) {
+    if (selectedMoves.length > 0 || selectedAbility) runSearch();
+  }
+});
+document.getElementById('ability-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !document.querySelector('#ability-dropdown .ml-dd-active')) {
+    if (selectedMoves.length > 0 || selectedAbility) runSearch();
   }
 });
 
