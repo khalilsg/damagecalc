@@ -1,5 +1,5 @@
 import { gen } from './calcEngine.js';
-import { getChampionsSpeciesIds, getChampionsMovesBatch } from './learnsets.js';
+import { getChampionsSpeciesIds, getChampionsMovesBatch, getAbilitiesBatch } from './learnsets.js';
 import { MOVE_EQUIVALENCIES } from './moveEquivalencies.js';
 
 // ── Equivalency lookup tables (built once at module load) ─────────────────────
@@ -22,11 +22,12 @@ let champSpecies = null;
 async function ensureChampionsSpecies() {
   if (champSpecies) return champSpecies;
   const ids = await getChampionsSpeciesIds();
+  const abilityMap = await getAbilitiesBatch(ids);
   champSpecies = [];
   for (const id of ids) {
     const species = gen.species.get(id);
     if (!species) continue;
-    champSpecies.push({ id, name: species.name, species });
+    champSpecies.push({ id, name: species.name, species, abilities: abilityMap.get(id) ?? [] });
   }
   return champSpecies;
 }
@@ -39,10 +40,8 @@ async function ensureAbilityNames() {
   if (champAbilityNames) return champAbilityNames;
   const species = await ensureChampionsSpecies();
   const set = new Set();
-  for (const { species: s } of species) {
-    for (const name of Object.values(s.abilities ?? {})) {
-      if (name) set.add(name);
-    }
+  for (const { abilities } of species) {
+    for (const name of abilities) set.add(name);
   }
   champAbilityNames = [...set].sort();
   return champAbilityNames;
@@ -246,12 +245,9 @@ async function runSearch() {
   btn.disabled    = false;
 
   results = [];
-  for (const { name, species: s } of species) {
-    // Ability filter
-    if (selectedAbility) {
-      const abilities = Object.values(s.abilities ?? {}).filter(Boolean);
-      if (!abilities.includes(selectedAbility)) continue;
-    }
+  for (const { name, species: s, abilities } of species) {
+    // Ability filter (uses PS Pokédex data — includes all three ability slots)
+    if (selectedAbility && !abilities.includes(selectedAbility)) continue;
 
     // Move filter — each group satisfied if Pokémon has ANY move in that group
     if (moveGroups.length > 0) {

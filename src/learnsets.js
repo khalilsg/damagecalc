@@ -94,6 +94,46 @@ export async function getChampionsMovesBatch(names) {
   return result;
 }
 
+// ── PS Pokédex (ability data) ─────────────────────────────────────────────────
+// gen.species.abilities from @smogon/calc is incomplete (many Pokémon only
+// show slot-0). Use the PS Pokédex which has all three ability slots.
+
+let _pokedex = null;
+let _pokedexPromise = null;
+
+async function fetchPSPokedex() {
+  if (_pokedex) return _pokedex;
+  if (_pokedexPromise) return _pokedexPromise;
+
+  _pokedexPromise = (async () => {
+    const res = await fetch('https://play.pokemonshowdown.com/data/pokedex.js');
+    if (!res.ok) throw new Error('Failed to fetch PS Pokédex');
+    const text = await res.text();
+    const mod = {};
+    // eslint-disable-next-line no-new-func
+    new Function('exports', text)(mod);
+    _pokedex = mod.BattlePokedex ?? {};
+    return _pokedex;
+  })();
+
+  return _pokedexPromise;
+}
+
+/**
+ * Returns all ability names (slots 0, 1, H) for an array of PS IDs.
+ * @param {string[]} psIds
+ * @returns {Promise<Map<string, string[]>>}
+ */
+export async function getAbilitiesBatch(psIds) {
+  const dex = await fetchPSPokedex();
+  const result = new Map();
+  for (const id of psIds) {
+    const entry = dex[id] ?? dex[resolveId(id, dex)] ?? null;
+    result.set(id, Object.values(entry?.abilities ?? {}).filter(Boolean));
+  }
+  return result;
+}
+
 // ── Base Gen 9 learnsets (fallback) ──────────────────────────────────────────
 
 let _gen9 = null;
