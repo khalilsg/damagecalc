@@ -1,5 +1,5 @@
 import { gen } from './calcEngine.js';
-import { getChampionsSpeciesIds, getChampionsMovesBatch, getAbilitiesBatch } from './learnsets.js';
+import { getChampionsSpeciesIds, getChampionsMovesBatch, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 import { MOVE_EQUIVALENCIES } from './moveEquivalencies.js';
 
 // ── Equivalency lookup tables (built once at module load) ─────────────────────
@@ -22,13 +22,30 @@ let champSpecies = null;
 async function ensureChampionsSpecies() {
   if (champSpecies) return champSpecies;
   const ids = await getChampionsSpeciesIds();
-  const abilityMap = await getAbilitiesBatch(ids);
+  const [abilityMap, megaForms] = await Promise.all([
+    getAbilitiesBatch(ids),
+    getChampionsMegaForms(ids),
+  ]);
+
   champSpecies = [];
+
   for (const id of ids) {
     const species = gen.species.get(id);
     if (!species) continue;
     champSpecies.push({ id, name: species.name, species, abilities: abilityMap.get(id) ?? [] });
   }
+
+  // Mega forms inherit their learnset from the base species (handled by resolveId
+  // in getChampionsMovesBatch); stats, types, and abilities come from PS Pokédex.
+  for (const mega of megaForms) {
+    champSpecies.push({
+      id: mega.id,
+      name: mega.name,
+      species: { baseStats: mega.baseStats, types: mega.types },
+      abilities: mega.abilities,
+    });
+  }
+
   return champSpecies;
 }
 

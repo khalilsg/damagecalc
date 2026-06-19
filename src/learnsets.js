@@ -134,6 +134,33 @@ export async function getAbilitiesBatch(psIds) {
   return result;
 }
 
+/**
+ * Returns Mega form data for every Champions-legal base species.
+ * Mega forms inherit their learnset from the base species; stats, types,
+ * and abilities come from the PS Pokédex (which has full Mega data).
+ *
+ * @param {string[]} champIds  PS IDs of the 237 Champions base species
+ * @returns {Promise<Array<{id, name, baseStats, types, abilities}>>}
+ */
+export async function getChampionsMegaForms(champIds) {
+  const dex = await fetchPSPokedex();
+  const champSet = new Set(champIds);
+  const result = [];
+  for (const [psId, entry] of Object.entries(dex)) {
+    if (!entry.forme?.startsWith('Mega')) continue;
+    const baseId = toPsId(entry.baseSpecies ?? '');
+    if (!champSet.has(baseId)) continue;
+    result.push({
+      id: psId,
+      name: entry.name,
+      baseStats: entry.baseStats,
+      types: entry.types,
+      abilities: Object.values(entry.abilities ?? {}).filter(Boolean),
+    });
+  }
+  return result;
+}
+
 // ── Base Gen 9 learnsets (fallback) ──────────────────────────────────────────
 
 let _gen9 = null;
