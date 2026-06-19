@@ -1,3 +1,4 @@
+import './siteHeader.js';
 /**
  * src/historyPage.js
  * Logic for history.html — match history viewer, pattern chart, export.

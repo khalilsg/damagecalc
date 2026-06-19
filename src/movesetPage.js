@@ -1,3 +1,4 @@
+import './siteHeader.js';
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMovesBatch, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 import { MOVE_EQUIVALENCIES } from './moveEquivalencies.js';

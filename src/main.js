@@ -1,3 +1,4 @@
+import './siteHeader.js';
 import { parseSets } from './parser.js';
 import { runAnalysis, resolveSpeciesName, allSpecies } from './calcEngine.js';
 import { preloadStats } from './smogonStats.js';

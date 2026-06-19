@@ -1,3 +1,4 @@
+import './siteHeader.js';
 import { gen, resolveSpeciesName, allSpecies } from './calcEngine.js';
 import { getChampionsMoves, getGen9Moves } from './learnsets.js';
 

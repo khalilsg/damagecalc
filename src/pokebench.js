@@ -1,3 +1,4 @@
+import './siteHeader.js';
 /**
  * src/pokebench.js
  * Browser entry point for the PokéBench UI.
