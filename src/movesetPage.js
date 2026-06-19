@@ -1,5 +1,19 @@
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMovesBatch } from './learnsets.js';
+import { MOVE_EQUIVALENCIES } from './moveEquivalencies.js';
+
+// ── Equivalency lookup tables (built once at module load) ─────────────────────
+
+// "Acid Armor / Iron Defense / Shelter" → ["acidarmor", "irondefense", "shelter"]
+const EQUIV_LABEL_TO_IDS = new Map();
+// Individual move names that belong to a group (excluded from flat autocomplete)
+const EQUIV_MEMBER_NAMES = new Set();
+
+for (const group of MOVE_EQUIVALENCIES) {
+  const label = group.join(' / ');
+  EQUIV_LABEL_TO_IDS.set(label, group.map(n => n.toLowerCase().replace(/[-\s']/g, '')));
+  for (const name of group) EQUIV_MEMBER_NAMES.add(name);
+}
 
 // ── Champions species list ────────────────────────────────────────────────────
 
@@ -42,8 +56,12 @@ function ensureMoveNames() {
   if (champMoveNames) return;
   champMoveNames = [];
   for (const m of gen.moves) {
-    if (m.name && m.name !== '(No Move)') champMoveNames.push(m.name);
+    if (m.name && m.name !== '(No Move)' && !EQUIV_MEMBER_NAMES.has(m.name)) {
+      champMoveNames.push(m.name);
+    }
   }
+  // Add group labels in place of the individual members
+  for (const label of EQUIV_LABEL_TO_IDS.keys()) champMoveNames.push(label);
   champMoveNames.sort();
 }
 
@@ -206,7 +224,10 @@ async function runSearch() {
   btn.textContent = 'LOADING…';
   btn.disabled    = true;
 
-  const moveIds = selectedMoves.map(toMoveId);
+  // Each entry is an array of IDs; a Pokémon matches if it has ANY id in each group.
+  const moveGroups = selectedMoves.map(label =>
+    EQUIV_LABEL_TO_IDS.get(label) ?? [toMoveId(label)]
+  );
 
   let species, movesets;
   try {
@@ -232,10 +253,10 @@ async function runSearch() {
       if (!abilities.includes(selectedAbility)) continue;
     }
 
-    // Move filter
-    if (moveIds.length > 0) {
+    // Move filter — each group satisfied if Pokémon has ANY move in that group
+    if (moveGroups.length > 0) {
       const moveset = movesets?.get(name);
-      if (!moveset || !moveIds.every(id => moveset.has(id))) continue;
+      if (!moveset || !moveGroups.every(ids => ids.some(id => moveset.has(id)))) continue;
     }
 
     const bs  = s.baseStats;
