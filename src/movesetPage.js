@@ -274,12 +274,13 @@ async function runSearch() {
 
     const bs  = s.baseStats;
     const bst = bs.hp + bs.atk + bs.def + bs.spa + bs.spd + bs.spe;
+    const ebst = bst - Math.min(bs.atk, bs.spa);
     results.push({
       name,
       types: s.types ?? [],
       hp: bs.hp, atk: bs.atk, def: bs.def,
       spa: bs.spa, spd: bs.spd, spe: bs.spe,
-      bst,
+      bst, ebst,
     });
   }
 
@@ -341,7 +342,7 @@ function renderTable() {
     return;
   }
 
-  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst'];
+  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst'];
 
   for (const row of results) {
     const tr = document.createElement('tr');
@@ -361,7 +362,8 @@ function renderTable() {
 
     for (const key of STAT_KEYS) {
       const sorted = key === sortKey;
-      const cls = `ml-td ml-td-stat${key === 'bst' ? ' ml-td-bst' : ''}${sorted ? ' ml-td-sorted' : ''}`;
+      const isBst = key === 'bst' || key === 'ebst';
+      const cls = `ml-td ml-td-stat${isBst ? ' ml-td-bst' : ''}${sorted ? ' ml-td-sorted' : ''}`;
       tr.append(el('td', cls, String(row[key])));
     }
 
