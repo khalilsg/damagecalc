@@ -151,6 +151,13 @@
     .ml-btn:hover    { background: #333; }
     .ml-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+    .ml-btn-secondary {
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    .ml-btn-secondary:hover { background: #f0f0f0; }
+
     .ml-error {
       color: #c0392b;
       font-size: 0.82rem;
@@ -296,8 +303,9 @@
     </div>
     <div id="ability-chips" class="ml-chips"></div>
 
-    <div style="margin-top:4px">
+    <div style="margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;">
       <button id="find-btn" class="ml-btn" disabled>FIND POKÉMON</button>
+      <button id="list-all-btn" class="ml-btn ml-btn-secondary">LIST ALL</button>
     </div>
     <div id="ml-error" class="ml-error"></div>
   </div>

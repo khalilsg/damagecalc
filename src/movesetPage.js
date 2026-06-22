@@ -231,12 +231,12 @@ function updateBtn() {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 
-async function runSearch() {
+async function runSearch({ listAll = false } = {}) {
   const btn     = document.getElementById('find-btn');
   const errorEl = document.getElementById('ml-error');
   errorEl.textContent = '';
 
-  if (selectedMoves.length === 0 && !selectedAbility) return;
+  if (!listAll && selectedMoves.length === 0 && !selectedAbility) return;
 
   btn.textContent = 'LOADING…';
   btn.disabled    = true;
@@ -396,7 +396,8 @@ initAutocomplete({
 
 updateBtn();
 
-document.getElementById('find-btn').addEventListener('click', runSearch);
+document.getElementById('find-btn').addEventListener('click', () => runSearch());
+document.getElementById('list-all-btn').addEventListener('click', () => runSearch({ listAll: true }));
 document.getElementById('move-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !document.querySelector('#move-dropdown .ml-dd-active')) {
     if (selectedMoves.length > 0 || selectedAbility) runSearch();
