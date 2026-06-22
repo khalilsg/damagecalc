@@ -275,13 +275,15 @@ async function runSearch() {
 
     const bs  = s.baseStats;
     const bst = bs.hp + bs.atk + bs.def + bs.spa + bs.spd + bs.spe;
-    const ebst = bst - Math.min(bs.atk, bs.spa);
+    const ebst    = bst - Math.min(bs.atk, bs.spa);
+    const trspeed = bs.hp + bs.atk + bs.def + bs.spa + bs.spd + (100 - bs.spe);
+    const bulk    = 2 * bs.hp + bs.def + bs.spd;
     results.push({
       name,
       types: s.types ?? [],
       hp: bs.hp, atk: bs.atk, def: bs.def,
       spa: bs.spa, spd: bs.spd, spe: bs.spe,
-      bst, ebst,
+      bst, ebst, trspeed, bulk,
     });
   }
 
@@ -343,7 +345,7 @@ function renderTable() {
     return;
   }
 
-  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst'];
+  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst', 'trspeed', 'bulk'];
 
   for (const row of results) {
     const tr = document.createElement('tr');
@@ -363,7 +365,7 @@ function renderTable() {
 
     for (const key of STAT_KEYS) {
       const sorted = key === sortKey;
-      const isBst = key === 'bst' || key === 'ebst';
+      const isBst = key === 'bst' || key === 'ebst' || key === 'trspeed' || key === 'bulk';
       const cls = `ml-td ml-td-stat${isBst ? ' ml-td-bst' : ''}${sorted ? ' ml-td-sorted' : ''}`;
       tr.append(el('td', cls, String(row[key])));
     }

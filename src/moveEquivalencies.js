@@ -6,4 +6,5 @@ export const MOVE_EQUIVALENCIES = [
   ['Acid Armor', 'Iron Defense', 'Shelter'],
   ['Rock Polish', 'Agility'],
   ['Thief', 'Switcheroo'],
+  ['Metal Sound', 'Fake Tears'],
 ];
