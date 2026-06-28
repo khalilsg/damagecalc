@@ -323,9 +323,10 @@ function buildFullPaste() {
 
 // ── Action buttons ────────────────────────────────────────────────────────────
 
-const copyBtn = document.getElementById('tb-copy-btn');
-const loadBtn = document.getElementById('tb-load-btn');
-const statusEl = document.getElementById('tb-status');
+const copyBtn      = document.getElementById('tb-copy-btn');
+const loadBtn      = document.getElementById('tb-load-btn');
+const pokebenchBtn = document.getElementById('tb-pokebench-btn');
+const statusEl     = document.getElementById('tb-status');
 
 function showStatus(msg, isError = false) {
   statusEl.textContent = msg;
@@ -351,4 +352,11 @@ loadBtn.addEventListener('click', () => {
   if (!paste) { showStatus('No Pokémon added yet.', true); return; }
   localStorage.setItem('kcalc_builder_team', paste);
   window.location.href = '/damagecalc/';
+});
+
+pokebenchBtn.addEventListener('click', () => {
+  const paste = buildFullPaste();
+  if (!paste) { showStatus('No Pokémon added yet.', true); return; }
+  const encoded = btoa(unescape(encodeURIComponent(paste)));
+  window.open(`/damagecalc/pokebench/?team=${encoded}`, '_blank', 'noopener,noreferrer');
 });
