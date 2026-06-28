@@ -1,6 +1,7 @@
 import './siteHeader.js';
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
+import { parseSets } from './parser.js';
 
 // [name, label] — sorted by boosted stat (Spe→Atk→SpA→Def→SpD), then by lowered stat same order
 const NATURES = [
@@ -56,6 +57,8 @@ const slotState = Array.from({ length: 6 }, () => ({
   moves: ['', '', '', ''],
   legalMoves: [],
 }));
+
+const slotDomRefs = [];
 
 // ── Autocomplete helper ───────────────────────────────────────────────────────
 
@@ -239,60 +242,81 @@ function createSlotEl(i) {
     moveInputs[m].addEventListener('change', () => { s.moves[m] = moveInputs[m].value.trim(); });
   }
 
+  // ── Species loader (used by autocomplete and paste import)
+  async function applySpecies(name, overrides = {}) {
+    const sp = (allChampSpecies ?? []).find(x => x.name === name);
+    if (!sp) return;
+
+    s.name = name;
+    s.id   = sp.id;
+    s.ability = '';
+    s.legalMoves = [];
+    s.moves = ['', '', '', ''];
+
+    nameInput.value = name;
+    for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
+
+    abilitySelect.innerHTML = '';
+    abilitySelect.append(el('option', null, 'Loading…'));
+    abilitySelect.disabled = true;
+
+    const [abilityMap, moveIds] = await Promise.all([
+      getAbilitiesBatch([sp.id]),
+      getChampionsMoves(name),
+    ]);
+
+    const abilities = abilityMap.get(sp.id) ?? [];
+    abilitySelect.innerHTML = '';
+    if (abilities.length === 0) {
+      const ph = el('option', null, '— none —');
+      ph.value = '';
+      abilitySelect.append(ph);
+    } else {
+      for (const ab of abilities) {
+        const o = el('option', null, ab);
+        o.value = ab;
+        abilitySelect.append(o);
+      }
+    }
+    abilitySelect.disabled = false;
+    s.ability = abilities[0] ?? '';
+
+    s.legalMoves = moveIds.map(id => gen.moves.get(id)?.name).filter(Boolean).sort();
+    for (const inp of moveInputs) inp.disabled = false;
+
+    // Apply overrides (from paste import)
+    if (overrides.item !== undefined)  { s.item = overrides.item; itemInput.value = overrides.item; }
+    if (overrides.ability && abilities.includes(overrides.ability)) {
+      s.ability = overrides.ability;
+      abilitySelect.value = overrides.ability;
+    }
+    if (overrides.nature) { s.nature = overrides.nature; natureSelect.value = overrides.nature; }
+    if (overrides.evs) {
+      for (const stat of ['hp', 'atk', 'def', 'spa', 'spd', 'spe']) {
+        const v = overrides.evs[stat] ?? 0;
+        s.evs[stat] = v;
+        if (evInputs[stat]) evInputs[stat].value = v;
+      }
+    }
+    if (overrides.moves) {
+      for (let m = 0; m < 4; m++) {
+        const mv = overrides.moves[m] ?? '';
+        s.moves[m] = mv;
+        if (moveInputs[m]) moveInputs[m].value = mv;
+      }
+    }
+  }
+
   // ── Wire Pokémon autocomplete
   initAC({
     input: nameInput,
     dropdown: nameDd,
     getNames: () => (allChampSpecies ?? []).map(sp => sp.name),
     openOnFocus: false,
-    onPick: async name => {
-      const sp = (allChampSpecies ?? []).find(x => x.name === name);
-      if (!sp) return;
-
-      s.name = name;
-      s.id   = sp.id;
-      s.ability = '';
-      s.legalMoves = [];
-      s.moves = ['', '', '', ''];
-
-      nameInput.value = name;
-      for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
-
-      abilitySelect.innerHTML = '';
-      const loading = el('option', null, 'Loading…');
-      abilitySelect.append(loading);
-      abilitySelect.disabled = true;
-
-      const [abilityMap, moveIds] = await Promise.all([
-        getAbilitiesBatch([sp.id]),
-        getChampionsMoves(name),
-      ]);
-
-      // Populate abilities
-      const abilities = abilityMap.get(sp.id) ?? [];
-      abilitySelect.innerHTML = '';
-      if (abilities.length === 0) {
-        const ph = el('option', null, '— none —');
-        ph.value = '';
-        abilitySelect.append(ph);
-      } else {
-        for (const ab of abilities) {
-          const o = el('option', null, ab);
-          o.value = ab;
-          abilitySelect.append(o);
-        }
-      }
-      abilitySelect.disabled = false;
-      s.ability = abilities[0] ?? '';
-
-      // Populate legal moves
-      s.legalMoves = moveIds
-        .map(id => gen.moves.get(id)?.name)
-        .filter(Boolean)
-        .sort();
-      for (const inp of moveInputs) inp.disabled = false;
-    },
+    onPick: name => applySpecies(name),
   });
+
+  slotDomRefs[i] = { applySpecies };
 
   // ── Clear
   clearBtn.addEventListener('click', () => {
@@ -343,6 +367,24 @@ function buildFullPaste() {
   return slotState.map(generatePaste).filter(Boolean).join('\n\n');
 }
 
+// ── Paste import ──────────────────────────────────────────────────────────────
+
+async function importFromPaste(text) {
+  await ensureSpeciesList();
+  const sets = parseSets(text).slice(0, 6);
+  if (sets.length === 0) throw new Error('No valid Pokémon found in paste');
+  await Promise.all(sets.map((set, i) =>
+    slotDomRefs[i]?.applySpecies(set.name, {
+      item:    set.item   ?? '',
+      ability: set.ability,
+      nature:  set.nature,
+      evs:     set.evs,
+      moves:   set.moves.slice(0, 4),
+    })
+  ));
+  return sets.length;
+}
+
 // ── Action buttons ────────────────────────────────────────────────────────────
 
 const copyBtn      = document.getElementById('tb-copy-btn');
@@ -381,4 +423,35 @@ pokebenchBtn.addEventListener('click', () => {
   if (!paste) { showStatus('No Pokémon added yet.', true); return; }
   const encoded = btoa(unescape(encodeURIComponent(paste)));
   window.open(`/damagecalc/pokebench/?team=${encoded}`, '_blank', 'noopener,noreferrer');
+});
+
+// ── Import from paste button ──────────────────────────────────────────────────
+
+const importBtn    = document.getElementById('tb-import-btn');
+const importInput  = document.getElementById('tb-import-textarea');
+const importStatus = document.getElementById('tb-import-status');
+
+importBtn.addEventListener('click', async () => {
+  const text = importInput.value.trim();
+  if (!text) {
+    importStatus.textContent = 'Paste a team first.';
+    importStatus.style.color = '#c0392b';
+    return;
+  }
+  importBtn.disabled = true;
+  importBtn.textContent = 'IMPORTING…';
+  importStatus.textContent = '';
+  try {
+    const count = await importFromPaste(text);
+    importStatus.textContent = `${count} Pokémon imported!`;
+    importStatus.style.color = '#2e7d32';
+    setTimeout(() => { importStatus.textContent = ''; }, 3000);
+    document.getElementById('tb-import').removeAttribute('open');
+  } catch (e) {
+    importStatus.textContent = e.message;
+    importStatus.style.color = '#c0392b';
+  } finally {
+    importBtn.disabled = false;
+    importBtn.textContent = 'IMPORT TEAM';
+  }
 });

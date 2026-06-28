@@ -246,6 +246,69 @@
       font-size: 0.8rem;
       font-weight: 600;
     }
+
+    /* ── Import section ── */
+    .tb-import {
+      max-width: 940px;
+      margin-bottom: 16px;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .tb-import-summary {
+      padding: 11px 16px;
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #888;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tb-import-summary::-webkit-details-marker { display: none; }
+    .tb-import-summary::before {
+      content: '▸';
+      font-size: 0.65rem;
+      transition: transform 0.15s;
+    }
+    .tb-import[open] .tb-import-summary::before { transform: rotate(90deg); }
+    .tb-import[open] .tb-import-summary { border-bottom: 1px solid #e5e5e5; color: #555; }
+
+    .tb-import-body {
+      padding: 14px 16px;
+    }
+
+    .tb-import-textarea {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      resize: vertical;
+      outline: none;
+      color: #1a1a1a;
+      background: #fafafa;
+      line-height: 1.55;
+    }
+    .tb-import-textarea:focus { border-color: #555; background: #fff; }
+
+    .tb-import-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    #tb-import-status {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -256,6 +319,18 @@
       <p>Build a Champions-legal team — select Pokémon, moves, and stats, then load directly into K Calc.</p>
     </div>
   </div>
+
+  <details class="tb-import" id="tb-import">
+    <summary class="tb-import-summary">Import from Paste</summary>
+    <div class="tb-import-body">
+      <textarea id="tb-import-textarea" class="tb-import-textarea" rows="9"
+        placeholder="Paste a Pokémon Showdown team export here…" spellcheck="false"></textarea>
+      <div class="tb-import-footer">
+        <button id="tb-import-btn" class="tb-btn tb-btn-secondary">IMPORT TEAM</button>
+        <span id="tb-import-status"></span>
+      </div>
+    </div>
+  </details>
 
   <div id="tb-grid"></div>
 
