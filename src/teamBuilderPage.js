@@ -62,7 +62,7 @@ const slotDomRefs = [];
 
 // ── Autocomplete helper ───────────────────────────────────────────────────────
 
-function initAC({ input, dropdown, getNames, onPick, maxResults = 80, openOnFocus = true }) {
+function initAC({ input, dropdown, getNames, onPick, maxResults = 80, openOnFocus = true, showOnEmpty = false }) {
   let items = [], activeIdx = -1;
 
   function render(q) {
@@ -70,7 +70,7 @@ function initAC({ input, dropdown, getNames, onPick, maxResults = 80, openOnFocu
     const hits = (getNames() ?? []).filter(n => n.toLowerCase().includes(lower)).slice(0, maxResults);
     dropdown.innerHTML = '';
     items = []; activeIdx = -1;
-    if (!hits.length || !q) { dropdown.classList.remove('open'); return; }
+    if (!hits.length || (!q && !showOnEmpty)) { dropdown.classList.remove('open'); return; }
     for (const name of hits) {
       const d = document.createElement('div');
       d.className = 'tb-dd-item';
@@ -97,7 +97,7 @@ function initAC({ input, dropdown, getNames, onPick, maxResults = 80, openOnFocu
   }
 
   input.addEventListener('input', () => render(input.value));
-  if (openOnFocus) input.addEventListener('focus', () => { if (input.value) render(input.value); });
+  if (openOnFocus) input.addEventListener('focus', () => render(input.value));
   input.addEventListener('blur', () => setTimeout(() => dropdown.classList.remove('open'), 150));
   input.addEventListener('keydown', e => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIdx < 0 ? 0 : activeIdx + 1); }
@@ -234,6 +234,7 @@ function createSlotEl(i) {
       input: moveInputs[m],
       dropdown: moveDds[m],
       getNames: () => s.legalMoves,
+      showOnEmpty: true,
       onPick: name => {
         s.moves[m] = name;
         moveInputs[m].value = name;
