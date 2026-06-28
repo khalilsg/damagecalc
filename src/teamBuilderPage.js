@@ -2,11 +2,33 @@ import './siteHeader.js';
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 
+// [name, label] — neutral natures have no modifier shown
 const NATURES = [
-  'Adamant','Bashful','Bold','Brave','Calm','Careful','Docile',
-  'Gentle','Hardy','Hasty','Impish','Jolly','Lax','Lonely','Mild',
-  'Modest','Naive','Naughty','Quiet','Quirky','Rash','Relaxed',
-  'Sassy','Serious','Timid',
+  ['Adamant', 'Adamant (+Atk, −SpA)'],
+  ['Bashful', 'Bashful'],
+  ['Bold',    'Bold (+Def, −Atk)'],
+  ['Brave',   'Brave (+Atk, −Spe)'],
+  ['Calm',    'Calm (+SpD, −Atk)'],
+  ['Careful', 'Careful (+SpD, −SpA)'],
+  ['Docile',  'Docile'],
+  ['Gentle',  'Gentle (+SpD, −Def)'],
+  ['Hardy',   'Hardy'],
+  ['Hasty',   'Hasty (+Spe, −Def)'],
+  ['Impish',  'Impish (+Def, −SpA)'],
+  ['Jolly',   'Jolly (+Spe, −SpA)'],
+  ['Lax',     'Lax (+Def, −SpD)'],
+  ['Lonely',  'Lonely (+Atk, −Def)'],
+  ['Mild',    'Mild (+SpA, −Def)'],
+  ['Modest',  'Modest (+SpA, −Atk)'],
+  ['Naive',   'Naive (+Spe, −SpD)'],
+  ['Naughty', 'Naughty (+Atk, −SpD)'],
+  ['Quiet',   'Quiet (+SpA, −Spe)'],
+  ['Quirky',  'Quirky'],
+  ['Rash',    'Rash (+SpA, −SpD)'],
+  ['Relaxed', 'Relaxed (+Def, −Spe)'],
+  ['Sassy',   'Sassy (+SpD, −Spe)'],
+  ['Serious', 'Serious'],
+  ['Timid',   'Timid (+Spe, −Atk)'],
 ];
 
 const STAT_LABELS = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
@@ -151,10 +173,10 @@ function createSlotEl(i) {
   const natureField = el('div', 'tb-field');
   natureField.append(el('label', 'tb-label', 'Nature'));
   const natureSelect = el('select', 'tb-select');
-  for (const nat of NATURES) {
-    const o = el('option', null, nat);
-    o.value = nat;
-    if (nat === 'Hardy') o.selected = true;
+  for (const [val, label] of NATURES) {
+    const o = el('option', null, label);
+    o.value = val;
+    if (val === 'Hardy') o.selected = true;
     natureSelect.append(o);
   }
   natureSelect.addEventListener('change', () => { s.nature = natureSelect.value; });
