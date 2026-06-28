@@ -247,6 +247,57 @@
       font-weight: 600;
     }
 
+    /* ── Base stats ── */
+    .tb-base-stats {
+      padding: 2px 0 0;
+    }
+
+    .tb-stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .tb-bst-total {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #bbb;
+      letter-spacing: 0.3px;
+    }
+
+    .tb-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 3px;
+    }
+
+    .tb-stat-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .tb-stat-name {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #ccc;
+    }
+
+    .tb-stat-val {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #333;
+    }
+
+    .tb-stat-val[data-tier="low"]  { color: #e74c3c; }
+    .tb-stat-val[data-tier="mid"]  { color: #e67e22; }
+    .tb-stat-val[data-tier="avg"]  { color: #888; }
+    .tb-stat-val[data-tier="high"] { color: #27ae60; }
+
     /* ── Import section ── */
     .tb-import {
       max-width: 940px;

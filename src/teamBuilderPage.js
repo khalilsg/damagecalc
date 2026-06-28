@@ -149,6 +149,27 @@ function createSlotEl(i) {
   nameField.append(nameWrap);
   card.append(nameField);
 
+  // ── Base stats display
+  const statsRow = el('div', 'tb-base-stats');
+  statsRow.hidden = true;
+  const statsHeader = el('div', 'tb-stats-header');
+  statsHeader.append(el('span', 'tb-label', 'BASE STATS'));
+  const bstEl = el('span', 'tb-bst-total', '');
+  statsHeader.append(bstEl);
+  statsRow.append(statsHeader);
+  const statGrid = el('div', 'tb-stat-grid');
+  const statEls = {};
+  for (const stat of ['hp', 'atk', 'def', 'spa', 'spd', 'spe']) {
+    const cell = el('div', 'tb-stat-cell');
+    cell.append(el('span', 'tb-stat-name', STAT_LABELS[stat]));
+    const valEl = el('span', 'tb-stat-val', '');
+    cell.append(valEl);
+    statGrid.append(cell);
+    statEls[stat] = valEl;
+  }
+  statsRow.append(statGrid);
+  card.append(statsRow);
+
   // ── Item + Ability
   const row1 = el('div', 'tb-two-col');
 
@@ -254,6 +275,16 @@ function createSlotEl(i) {
     s.legalMoves = [];
     s.moves = ['', '', '', ''];
 
+    const baseStats = gen.species.get(sp.id)?.baseStats ?? {};
+    const bst = Object.values(baseStats).reduce((sum, v) => sum + v, 0);
+    bstEl.textContent = `BST ${bst}`;
+    for (const stat of ['hp', 'atk', 'def', 'spa', 'spd', 'spe']) {
+      const v = baseStats[stat] ?? 0;
+      statEls[stat].textContent = v;
+      statEls[stat].dataset.tier = v < 60 ? 'low' : v < 80 ? 'mid' : v < 100 ? 'avg' : 'high';
+    }
+    statsRow.hidden = false;
+
     nameInput.value = name;
     for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
 
@@ -337,6 +368,7 @@ function createSlotEl(i) {
     natureSelect.value = 'Hardy';
     for (const stat of ['hp','atk','def','spa','spd','spe']) evInputs[stat].value = 0;
     for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
+    statsRow.hidden = true;
   });
 
   return card;
