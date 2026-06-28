@@ -25,11 +25,7 @@ const NATURES = [
   ['Calm',    'Calm (+SpD, −Atk)'],
   ['Careful', 'Careful (+SpD, −SpA)'],
   ['Gentle',  'Gentle (+SpD, −Def)'],
-  ['Hardy',   'Hardy'],
-  ['Docile',  'Docile'],
-  ['Serious', 'Serious'],
-  ['Bashful', 'Bashful'],
-  ['Quirky',  'Quirky'],
+  ['Serious', 'Serious (neutral)'],
 ];
 
 const STAT_LABELS = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
@@ -52,7 +48,7 @@ async function ensureSpeciesList() {
 // ── Slot state ────────────────────────────────────────────────────────────────
 
 const slotState = Array.from({ length: 6 }, () => ({
-  name: '', id: '', item: '', ability: '', nature: 'Hardy',
+  name: '', id: '', item: '', ability: '', nature: 'Serious',
   evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
   moves: ['', '', '', ''],
   legalMoves: [],
@@ -200,7 +196,7 @@ function createSlotEl(i) {
   for (const [val, label] of NATURES) {
     const o = el('option', null, label);
     o.value = val;
-    if (val === 'Hardy') o.selected = true;
+    if (val === 'Serious') o.selected = true;
     natureSelect.append(o);
   }
   natureSelect.addEventListener('change', () => { s.nature = natureSelect.value; });
@@ -353,7 +349,7 @@ function createSlotEl(i) {
   // ── Clear
   clearBtn.addEventListener('click', () => {
     Object.assign(s, {
-      name: '', id: '', item: '', ability: '', nature: 'Hardy',
+      name: '', id: '', item: '', ability: '', nature: 'Serious',
       evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
       moves: ['', '', '', ''],
       legalMoves: [],
@@ -365,7 +361,7 @@ function createSlotEl(i) {
     ph.value = '';
     abilitySelect.append(ph);
     abilitySelect.disabled = true;
-    natureSelect.value = 'Hardy';
+    natureSelect.value = 'Serious';
     for (const stat of ['hp','atk','def','spa','spd','spe']) evInputs[stat].value = 0;
     for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
     statsRow.hidden = true;
