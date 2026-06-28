@@ -132,6 +132,13 @@ const saveBtn    = document.getElementById('team-save-btn');
 const shareBtn   = document.getElementById('team-share-btn');
 const deleteBtn  = document.getElementById('team-delete-btn');
 
+// Load team pasted from Team Builder
+const _builderTeam = localStorage.getItem('kcalc_builder_team');
+if (_builderTeam) {
+  localStorage.removeItem('kcalc_builder_team');
+  teamInput.value = _builderTeam;
+}
+
 const STORAGE_KEY = 'kcalc_teams';
 let activeSlotName = null;  // name of the currently loaded saved slot (null = none)
 

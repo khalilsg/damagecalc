@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Builder — K Calc</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: 940px;
+    }
+    .page-header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 2px; }
+    .page-header p  { font-size: 0.78rem; color: #888; margin-top: 4px; }
+
+    /* ── Slot grid ── */
+    #tb-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      max-width: 940px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 620px) {
+      #tb-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Slot card ── */
+    .tb-slot {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .tb-slot-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tb-slot-num {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #aaa;
+    }
+
+    .tb-clear-btn {
+      background: none;
+      border: none;
+      font-size: 0.7rem;
+      color: #ccc;
+      cursor: pointer;
+      padding: 2px 4px;
+      font-family: inherit;
+    }
+    .tb-clear-btn:hover { color: #888; }
+
+    /* ── Field / label ── */
+    .tb-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .tb-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #888;
+    }
+
+    .tb-two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* ── Inputs ── */
+    .tb-input-wrap {
+      position: relative;
+    }
+
+    .tb-input {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      background: #fff;
+      color: #1a1a1a;
+      outline: none;
+    }
+    .tb-input:focus { border-color: #555; }
+    .tb-input:disabled { background: #f8f8f8; color: #bbb; cursor: not-allowed; }
+
+    .tb-select {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 6px 10px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      background: #fff;
+      color: #1a1a1a;
+      outline: none;
+      cursor: pointer;
+      appearance: auto;
+    }
+    .tb-select:disabled { background: #f8f8f8; color: #bbb; cursor: not-allowed; }
+
+    /* ── Dropdown ── */
+    .tb-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 200;
+      display: none;
+    }
+    .tb-dropdown.open { display: block; }
+    .tb-dd-item { padding: 5px 10px; font-size: 0.82rem; cursor: pointer; }
+    .tb-dd-item:hover, .tb-dd-active { background: #f0f0f0; }
+
+    /* ── EVs ── */
+    .tb-ev-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .tb-ev-cell {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tb-ev-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #999;
+      min-width: 24px;
+      text-align: right;
+    }
+
+    .tb-ev-input {
+      width: 48px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      text-align: right;
+      outline: none;
+    }
+    .tb-ev-input:focus { border-color: #555; }
+
+    /* ── Moves ── */
+    .tb-moves-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .tb-move-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tb-move-num {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #ccc;
+      width: 10px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .tb-move-input {
+      font-size: 0.82rem;
+    }
+
+    /* ── Action bar ── */
+    .tb-actions {
+      max-width: 940px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .tb-btn {
+      background: #111;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .tb-btn:hover { background: #333; }
+
+    .tb-btn-secondary {
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    .tb-btn-secondary:hover { background: #f0f0f0; }
+
+    #tb-status {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-header">
+    <div>
+      <h1>TEAM BUILDER</h1>
+      <p>Build a Champions-legal team — select Pokémon, moves, and stats, then load directly into K Calc.</p>
+    </div>
+  </div>
+
+  <div id="tb-grid"></div>
+
+  <div class="tb-actions">
+    <button id="tb-load-btn" class="tb-btn">LOAD INTO K CALC</button>
+    <button id="tb-copy-btn" class="tb-btn tb-btn-secondary">COPY TEAM</button>
+    <span id="tb-status"></span>
+  </div>
+
+  <script type="module" src="/src/teamBuilderPage.js"></script>
+</body>
+</html>
