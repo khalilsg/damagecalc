@@ -2,33 +2,33 @@ import './siteHeader.js';
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 
-// [name, label] — neutral natures have no modifier shown
+// [name, label] — sorted by boosted stat (Spe→Atk→SpA→Def→SpD), then by lowered stat same order
 const NATURES = [
-  ['Adamant', 'Adamant (+Atk, −SpA)'],
-  ['Bashful', 'Bashful'],
-  ['Bold',    'Bold (+Def, −Atk)'],
-  ['Brave',   'Brave (+Atk, −Spe)'],
-  ['Calm',    'Calm (+SpD, −Atk)'],
-  ['Careful', 'Careful (+SpD, −SpA)'],
-  ['Docile',  'Docile'],
-  ['Gentle',  'Gentle (+SpD, −Def)'],
-  ['Hardy',   'Hardy'],
-  ['Hasty',   'Hasty (+Spe, −Def)'],
-  ['Impish',  'Impish (+Def, −SpA)'],
+  ['Timid',   'Timid (+Spe, −Atk)'],
   ['Jolly',   'Jolly (+Spe, −SpA)'],
-  ['Lax',     'Lax (+Def, −SpD)'],
-  ['Lonely',  'Lonely (+Atk, −Def)'],
-  ['Mild',    'Mild (+SpA, −Def)'],
-  ['Modest',  'Modest (+SpA, −Atk)'],
+  ['Hasty',   'Hasty (+Spe, −Def)'],
   ['Naive',   'Naive (+Spe, −SpD)'],
+  ['Brave',   'Brave (+Atk, −Spe)'],
+  ['Adamant', 'Adamant (+Atk, −SpA)'],
+  ['Lonely',  'Lonely (+Atk, −Def)'],
   ['Naughty', 'Naughty (+Atk, −SpD)'],
   ['Quiet',   'Quiet (+SpA, −Spe)'],
-  ['Quirky',  'Quirky'],
+  ['Modest',  'Modest (+SpA, −Atk)'],
+  ['Mild',    'Mild (+SpA, −Def)'],
   ['Rash',    'Rash (+SpA, −SpD)'],
   ['Relaxed', 'Relaxed (+Def, −Spe)'],
+  ['Bold',    'Bold (+Def, −Atk)'],
+  ['Impish',  'Impish (+Def, −SpA)'],
+  ['Lax',     'Lax (+Def, −SpD)'],
   ['Sassy',   'Sassy (+SpD, −Spe)'],
+  ['Calm',    'Calm (+SpD, −Atk)'],
+  ['Careful', 'Careful (+SpD, −SpA)'],
+  ['Gentle',  'Gentle (+SpD, −Def)'],
+  ['Hardy',   'Hardy'],
+  ['Docile',  'Docile'],
   ['Serious', 'Serious'],
-  ['Timid',   'Timid (+Spe, −Atk)'],
+  ['Bashful', 'Bashful'],
+  ['Quirky',  'Quirky'],
 ];
 
 const STAT_LABELS = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
