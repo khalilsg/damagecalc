@@ -302,3 +302,36 @@ git add dist/
 git commit -m "build"
 git push origin main
 ```
+
+### Updating Smogon Chaos Data
+
+K Calc and PokéBench pull their usage stats (common moves, spreads, items) from trimmed Smogon chaos JSON files served as static assets from `public/data/chaos/`. When new monthly stats drop on Smogon, run this script to fetch and update them:
+
+```bash
+# Update all three default Champions formats for a given month
+npm run update-chaos -- --month 2026-04
+
+# Update a single prefix only
+npm run update-chaos -- --month 2026-04 --prefix gen9championsvgc2026regmabo3
+```
+
+The script fetches each format from `https://www.smogon.com/stats/{month}/chaos/{prefix}-0.json`, trims each species entry to the top 8 moves, 5 spreads, and 5 items (cutting file size ~85%), and writes the result to `public/data/chaos/`. 404s (format not yet available for that month) are skipped automatically.
+
+Default prefixes updated when no `--prefix` is given:
+
+| Format | Prefix |
+|--------|--------|
+| VGC 2026 Reg MA Bo3 | `gen9championsvgc2026regmabo3` |
+| VGC 2026 Reg MA | `gen9championsvgc2026regma` |
+| BSS Reg MA | `gen9championsbssregma` |
+
+After running, commit the updated files and redeploy:
+
+```bash
+git add public/data/chaos/
+git commit -m "Update Smogon chaos data for YYYY-MM"
+npm run build
+git add dist/
+git commit -m "build"
+git push origin main
+```
