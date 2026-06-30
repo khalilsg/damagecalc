@@ -1,20 +1,28 @@
-# K Calc + PokéBench CLI
+# K Calc — Champions Format Toolsuite
 ### Competitive Pokémon Analysis Tools
 
-Two tools for competitive Pokémon doubles analysis, built for the **Champions format** (32 EV cap):
+A collection of web tools and a CLI for competitive Pokémon doubles analysis, built for the **Champions format** (32 EV cap per stat).
+
+**Live app:** https://khalilsg.github.io/damagecalc/
+
+All tools use `@smogon/calc` for damage calculations. Champions-format EVs (0–32) are scaled to standard equivalents before passing to the calc engine — 32 Champions EVs produce the same stat as 252 standard EVs.
+
+---
+
+## Tools
 
 | Tool | What it does |
 |------|-------------|
-| **K Calc** | Web app — analyze your full team vs. a threat list, with a live battle tracker |
-| **PokéBench CLI** | Command-line tool — benchmark a single Pokémon against real Smogon metagame usage data |
-
-Both use `@smogon/calc` for damage calculations, with Champions-format EV scaling (32 EVs = 252 standard EVs in stat contribution).
+| **K Calc** | Paste your team and pick opponents — see all offensive/defensive matchups, speed tiers, and lead recommendations, updated live as field conditions change |
+| **Team Builder** | Visual slot-by-slot team editor; exports a Showdown paste or loads directly into K Calc |
+| **PokéBench** | Web and CLI tool — benchmark a Pokémon against real Smogon usage data |
+| **Compare** | Side-by-side base stat butterfly chart + full Champions movepools for any two Pokémon |
+| **PokéFinder** | Filter every Champions-legal Pokémon by moves and/or ability; sort results by any stat |
+| **Match History** | Log and review matches with per-game results, team snapshots, and TSV export |
 
 ---
 
 ## K Calc (Web App)
-
-**Live app:** https://khalilsg.github.io/damagecalc/
 
 **Demo mode** (pre-loaded team, no setup required): https://khalilsg.github.io/damagecalc/demo/
 
@@ -41,24 +49,6 @@ Real-time state tracking that updates all tabs without re-running the full analy
 - **Screens:** Reflect and Light Screen for both your side and opponent's side.
 - **Friend Guard:** Separate toggles for your side and the opponent's side. Halves all incoming damage to that side.
 - **Opponent move log:** Type a move name to log it. Immediately calculates damage against your full team and displays it with a LIVE badge in the Defense tabs.
-
-### Running Locally
-
-```
-npm install
-npm run dev
-```
-
-Then open http://localhost:5173.
-
-To deploy to GitHub Pages:
-
-```
-npm run build
-git add dist/
-git commit -m "build"
-git push origin main
-```
 
 ### Team Format
 
@@ -89,8 +79,6 @@ Timid Nature
 Pre-loaded team presets live in the `teams/` folder as plain `.txt` files.
 
 ### Analysis Logic
-
-Uses the **Champions format**: EVs are out of 32 (not 252). The tool scales them to standard equivalents before passing to `@smogon/calc` — 32 Champions EVs produce the same stat as 252 standard EVs.
 
 **Offensive Archetypes** (opponent's possible defensive spreads)
 
@@ -141,19 +129,45 @@ Edit `MOVES_TO_SKIP` in `src/calcEngine.js` to change this list.
 
 ---
 
-## PokéBench CLI
+## Team Builder
 
-Benchmark a single Pokémon against real Smogon metagame usage data — offensive damage output, defensive survival rates, and speed comparisons against the top threats in your format.
+Visual team editor for Champions-legal teams. Select up to 6 Pokémon slot by slot, then load the result directly into K Calc or copy it as a Showdown paste.
 
-### Usage
+### Slot cards
 
-```
+Each slot card includes:
+
+- **Pokémon autocomplete** — searches the full Champions-legal species list including Mega forms
+- **Base stats display** — shown automatically after selecting a species; HP/Atk/Def/SpA/SpD/Spe with color tiers (red < 60, orange < 80, grey < 100, green ≥ 100) and a BST total
+- **Item** — free-text input
+- **Ability** — dropdown populated with the selected Pokémon's legal abilities
+- **Nature** — dropdown sorted by boosted stat then lowered stat; 20 stat-affecting natures + Serious (neutral)
+- **EVs** — 6 inputs (0–32 each), one per stat
+- **Moves** — 4 autocomplete inputs; shows the full Champions-legal moveset on focus without requiring any text
+
+### Import from Paste
+
+A collapsible section at the top accepts a Showdown-format paste and pre-fills all 6 slots, including item, ability, nature, EVs, and moves. After import the panel auto-closes.
+
+### Export
+
+- **LOAD INTO K CALC** — writes the paste to `localStorage` and navigates to K Calc, which picks it up automatically
+- **COPY TEAM** — copies the full Showdown paste to clipboard
+- **OPEN IN POKÉBENCH** — opens the team in PokéBench web
+
+---
+
+## PokéBench
+
+Benchmark a Pokémon against real Smogon metagame usage data. Available as a web app and as a CLI.
+
+**Web app:** https://khalilsg.github.io/damagecalc/pokebench/
+
+### CLI Usage
+
+```bash
 node pokebench/index.js [options]
-```
-
-Or via npm:
-
-```
+# or
 npm run pokebench -- [options]
 ```
 
@@ -177,31 +191,19 @@ node pokebench/index.js \
 | `--mon` | Pokémon to benchmark | **Required** |
 | `--month` | Smogon stats month (`YYYY-MM`) | **Required** |
 | `--prefix` | Format prefix (see below) | **Required** |
-| `--nature` | Nature | `Bashful` |
+| `--nature` | Nature | `Serious` |
 | `--evs` | EV spread: `HP/Atk/Def/SpA/SpD/Spe` (Champions cap: 32/stat) | `0/0/0/0/0/0` |
 | `--item` | Held item | None |
 | `--moves` | Comma-separated moves (defaults to the Pokémon's top meta moves) | Auto |
 | `--top` | Number of opponents to test against | `20` |
-| `--opponents` | Comma-separated list of specific Pokémon to test against; overrides `--top` | Off |
-| `--test-items` | Comma-separated list of items to compare; overrides `--item` | Off |
+| `--opponents` | Comma-separated list of specific Pokémon; overrides `--top` | Off |
+| `--test-items` | Comma-separated items to compare; overrides `--item` | Off |
 | `--boosts` | Stat stage boosts, e.g. `"+2 SpA,-1 Spe"` | None |
 | `--optimize` | Run EV optimization mode | Off |
 
 ### Finding the Right Prefix
 
-Prefixes come from Smogon's stats server. If you use a wrong prefix, the tool prints the available options automatically:
-
-```
-Error: Prefix "gen9championsvgc2026regmabo" not found for 2026-04.
-
-Available Champions formats for 2026-04:
-  --prefix "gen9championsbssregma"
-  --prefix "gen9championsvgc2026regma"
-  --prefix "gen9championsvgc2026regmabo3"
-  ...
-```
-
-You can also browse https://www.smogon.com/stats/{YYYY-MM}/chaos/ directly.
+If you use a wrong prefix, the tool prints the available options automatically. You can also browse `https://www.smogon.com/stats/{YYYY-MM}/chaos/` directly.
 
 Common Champions prefixes:
 
@@ -213,35 +215,13 @@ Common Champions prefixes:
 
 ### Output
 
-Three sections are printed for every run:
+**Offensive Check** — your moves vs. each opponent's common defensive spreads and items. Shows damage range and KO probability.
 
-**Offensive Check** — your moves vs. each opponent's common defensive spreads (top 5) and items (top 3). Shows damage range across the full spread × item matrix and KO probability.
-
-```
-┌────────────┬───────┬────────┬─────────────┬──────────────┬──────────┐
-│ Opponent   │ Usage │ Speed  │ Move        │ Damage Range │ KO?      │
-├────────────┼───────┼────────┼─────────────┼──────────────┼──────────┤
-│ Gholdengo  │ 22.3% │ Faster │ Shadow Ball │ 89.4–107.2%  │ OHKO ~   │
-│            │       │        │ Dragon Darts│ 52.1–63.4%   │ 2HKO ✓   │
-└────────────┴───────┴────────┴─────────────┴──────────────┴──────────┘
-```
-
-**Defensive Check** — each opponent's top 10 offensive moves vs. your spread. Shows the full incoming damage range and whether you survive the worst case.
-
-```
-┌────────────┬───────┬─────────────┬─────────────────┬──────────┐
-│ Attacker   │ Usage │ Their Move  │ Incoming Damage │ Survive? │
-├────────────┼───────┼─────────────┼─────────────────┼──────────┤
-│ Great Tusk │ 35.1% │ Earthquake  │ 41.1–83.4%      │ ✓        │
-│            │       │ Close Combat│ 95.2–113.6%     │ ✗ (114%) │
-└────────────┴───────┴─────────────┴─────────────────┴──────────┘
-```
+**Defensive Check** — each opponent's top offensive moves vs. your spread. Shows incoming damage and whether you survive.
 
 **Speed Audit** — your speed vs. each opponent's range across their common spreads.
 
 ### Item Comparison
-
-Test multiple items at once to see how your choice affects every matchup:
 
 ```bash
 node pokebench/index.js --mon "Blastoise-Mega" \
@@ -252,28 +232,73 @@ node pokebench/index.js --mon "Blastoise-Mega" \
 
 ### Optimization Mode
 
-The `--optimize` flag iterates EV investments and reports only the thresholds where KO status changes (offensive) or survival flips (defensive) — keeping output actionable rather than exhaustive.
+`--optimize` iterates EV investments and reports only the thresholds where KO status or survival flips — keeping output actionable rather than exhaustive.
 
-```bash
-node pokebench/index.js --mon "Dragapult" \
-  --nature "Timid" --month "2026-04" \
-  --prefix "gen9championsvgc2026regmabo3" \
-  --optimize
+**Offensive optimization:** tests all SpA/Atk values 0–32 × relevant natures. Reports the first EV value that achieves each KO tier per matchup.
+
+**Defensive optimization:** tests HP × Def/SpD values × relevant natures. Reports the minimum investment needed to survive each threat.
+
+---
+
+## Compare
+
+Pick any two Champions-legal Pokémon to compare them side by side:
+
+- **Butterfly chart** — base stats for both Pokémon on a shared axis; visually highlights where each one wins
+- **Champions movepool diff** — three columns: moves only A can learn, moves both share, moves only B can learn
+
+---
+
+## PokéFinder
+
+Filter every Champions-legal Pokémon by the moves and/or ability they can learn. Useful for finding coverage options or scouting what can fill a specific role.
+
+### How it works
+
+1. Add one or more moves (with move-equivalency grouping for functionally identical moves, e.g. Acid Armor / Iron Defense / Shelter)
+2. Optionally add an ability filter
+3. Click **FIND POKÉMON** — results show every Pokémon that satisfies all filters
+4. Click any row to open that Pokémon's Serebii Champions page
+
+### Result columns
+
+| Column | What it shows |
+|--------|--------------|
+| HP / Atk / Def / SpA / SpD / Spe | Base stats |
+| BST | Base Stat Total |
+| eBST | Effective BST — BST minus the weaker offensive stat (min of Atk, SpA) |
+| TR | Trick Room value — HP + Atk + Def + SpA + SpD + (100 − Spe) |
+| Bulk | Full bulk — 2×HP + Def + SpD |
+| Lo Blk | Low bulk — HP + min(Def, SpD) |
+
+All columns are sortable. Hover any column header to see its formula.
+
+---
+
+## Match History
+
+Log match results and review them later.
+
+- Per-game win/loss/tie tracking with opponent team snapshots
+- Loss reason tagging for pattern analysis
+- TSV export for spreadsheet analysis
+
+---
+
+## Running Locally
+
+```
+npm install
+npm run dev
 ```
 
-**Offensive optimization:** tests all SpA/Atk values 0–32 × relevant natures (Serious + Modest/Adamant). Reports the first EV value that achieves each KO tier per matchup.
+Open http://localhost:5173. All pages (K Calc, Team Builder, Compare, PokéFinder, Match History) are served from the same dev server.
 
-**Defensive optimization:** tests HP 0–32 × Def/SpD in multiples of 4 × relevant natures (Serious + Bold for physical, Serious + Calm for special). Reports the minimum investment needed to survive each threat.
-
-Sample output:
+To deploy to GitHub Pages:
 
 ```
-═══ OPTIMIZATION: OFFENSE (SPA 0–32) ═══
-
-┌──────────────────┬────────────┬─────────────┬─────────────┬──────────────────┐
-│ Investment       │ Opponent   │ Move        │ Damage      │ KO tier          │
-├──────────────────┼────────────┼─────────────┼─────────────┼──────────────────┤
-│ Modest 12 SPA    │ Gholdengo  │ Shadow Ball │ 98.2–117.4% │ Chance OHKO      │
-│ Modest 20 SPA    │ Gholdengo  │ Shadow Ball │ 104.1–124.5%│ Guaranteed OHKO  │
-└──────────────────┴────────────┴─────────────┴─────────────┴──────────────────┘
+npm run build
+git add dist/
+git commit -m "build"
+git push origin main
 ```
