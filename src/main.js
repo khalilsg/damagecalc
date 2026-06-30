@@ -15,6 +15,7 @@ import { renderMatchupLookup } from './ui/matchupLookup.js';
 import { initLeadSelectorTab } from './ui/leadSelector.js';
 import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
 import { getAbilitiesBatch } from './learnsets.js';
+import { getSavedTeams, setSavedTeams } from './savedTeams.js';
 import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
 import { openSaveMatchModal } from './ui/saveMatchModal.js';
 import { buildSnapshot } from './matchHistory.js';
@@ -141,16 +142,7 @@ if (_builderTeam) {
   teamInput.value = _builderTeam;
 }
 
-const STORAGE_KEY = 'kcalc_teams';
 let activeSlotName = null;  // name of the currently loaded saved slot (null = none)
-
-function getSavedTeams() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]'); }
-  catch { return []; }
-}
-function setSavedTeams(teams) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(teams));
-}
 
 function rebuildTeamDropdown() {
   teamSelect.innerHTML = '<option value="" disabled selected>Load a team…</option>';

@@ -2,6 +2,8 @@ import './siteHeader.js';
 import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 import { parseSets } from './parser.js';
+import { TEAMS } from './teams.js';
+import { getSavedTeams, saveTeam, deleteTeam } from './savedTeams.js';
 
 // [name, label] — sorted by boosted stat (Spe→Atk→SpA→Def→SpD), then by lowered stat same order
 const NATURES = [
@@ -344,10 +346,8 @@ function createSlotEl(i) {
     onPick: name => applySpecies(name),
   });
 
-  slotDomRefs[i] = { applySpecies };
-
   // ── Clear
-  clearBtn.addEventListener('click', () => {
+  function clearSlot() {
     Object.assign(s, {
       name: '', id: '', item: '', ability: '', nature: 'Serious',
       evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
@@ -365,7 +365,10 @@ function createSlotEl(i) {
     for (const stat of ['hp','atk','def','spa','spd','spe']) evInputs[stat].value = 0;
     for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
     statsRow.hidden = true;
-  });
+  }
+  clearBtn.addEventListener('click', clearSlot);
+
+  slotDomRefs[i] = { applySpecies, clear: clearSlot };
 
   return card;
 }
@@ -402,6 +405,7 @@ async function importFromPaste(text) {
   await ensureSpeciesList();
   const sets = parseSets(text).slice(0, 6);
   if (sets.length === 0) throw new Error('No valid Pokémon found in paste');
+  for (const ref of slotDomRefs) ref?.clear?.();
   await Promise.all(sets.map((set, i) =>
     slotDomRefs[i]?.applySpecies(set.name, {
       item:    set.item   ?? '',
@@ -484,3 +488,87 @@ importBtn.addEventListener('click', async () => {
     importBtn.textContent = 'IMPORT TEAM';
   }
 });
+
+// ── My Teams (shared localStorage store with K Calc) ──────────────────────────
+
+const teamSelect    = document.getElementById('tb-team-select');
+const saveTeamBtn   = document.getElementById('tb-save-btn');
+const deleteTeamBtn = document.getElementById('tb-delete-btn');
+let activeTeamName  = null;  // name of the currently loaded saved team (null = none)
+
+function rebuildTeamDropdown() {
+  teamSelect.innerHTML = '<option value="" disabled selected>Load a saved team…</option>';
+
+  if (TEAMS.length > 0) {
+    const g = el('optgroup');
+    g.label = 'Presets';
+    for (const t of TEAMS) {
+      const o = el('option', null, t.name);
+      o.value = `preset:${t.name}`;
+      g.append(o);
+    }
+    teamSelect.append(g);
+  }
+
+  const saved = getSavedTeams();
+  if (saved.length > 0) {
+    const g = el('optgroup');
+    g.label = 'My Teams';
+    for (const t of saved) {
+      const o = el('option', null, t.name);
+      o.value = `saved:${t.name}`;
+      g.append(o);
+    }
+    teamSelect.append(g);
+  }
+}
+
+teamSelect.addEventListener('change', async () => {
+  const val = teamSelect.value;
+  teamSelect.value = '';
+
+  let text = null, name = null, fromSaved = false;
+  if (val.startsWith('preset:')) {
+    text = TEAMS.find(t => t.name === val.slice(7))?.text ?? null;
+  } else if (val.startsWith('saved:')) {
+    name = val.slice(6);
+    text = getSavedTeams().find(t => t.name === name)?.text ?? null;
+    fromSaved = true;
+  }
+  if (!text) return;
+
+  teamSelect.disabled = true;
+  try {
+    const count = await importFromPaste(text);
+    activeTeamName = fromSaved ? name : null;
+    deleteTeamBtn.disabled = !activeTeamName;
+    showStatus(`${count} Pokémon loaded.`);
+  } catch (e) {
+    showStatus(e.message, true);
+  } finally {
+    teamSelect.disabled = false;
+  }
+});
+
+saveTeamBtn.addEventListener('click', () => {
+  const paste = buildFullPaste();
+  if (!paste) { showStatus('No Pokémon added yet.', true); return; }
+  const name = window.prompt('Save team as:', activeTeamName ?? '');
+  if (!name?.trim()) return;
+  activeTeamName = saveTeam(name, paste);
+  deleteTeamBtn.disabled = false;
+  rebuildTeamDropdown();
+  showStatus(`Saved "${activeTeamName}".`);
+});
+
+deleteTeamBtn.addEventListener('click', () => {
+  if (!activeTeamName) return;
+  if (!window.confirm(`Delete "${activeTeamName}"?`)) return;
+  deleteTeam(activeTeamName);
+  activeTeamName = null;
+  deleteTeamBtn.disabled = true;
+  rebuildTeamDropdown();
+  showStatus('Team deleted.');
+});
+
+rebuildTeamDropdown();

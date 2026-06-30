@@ -360,6 +360,23 @@
       font-size: 0.8rem;
       font-weight: 600;
     }
+
+    /* ── My Teams bar ── */
+    .tb-teambar {
+      max-width: 940px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tb-team-select {
+      width: auto;
+      flex: 1;
+      min-width: 200px;
+      max-width: 360px;
+    }
   </style>
 </head>
 <body>
@@ -369,6 +386,14 @@
       <h1>TEAM BUILDER</h1>
       <p>Build a Champions-legal team — select Pokémon, moves, and stats, then load directly into K Calc.</p>
     </div>
+  </div>
+
+  <div class="tb-teambar">
+    <select id="tb-team-select" class="tb-select tb-team-select">
+      <option value="" disabled selected>Load a saved team…</option>
+    </select>
+    <button id="tb-save-btn" class="tb-btn tb-btn-secondary">SAVE TEAM</button>
+    <button id="tb-delete-btn" class="tb-btn tb-btn-secondary" disabled>DELETE</button>
   </div>
 
   <details class="tb-import" id="tb-import">
