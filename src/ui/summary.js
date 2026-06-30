@@ -1,5 +1,4 @@
 import { SKIP_MOVES } from '../leadSelector/score.js';
-import { gen } from '../calcEngine.js';
 
 // ── Configurable alert lists — edit these to add/remove flags ─────────────────
 
@@ -160,36 +159,34 @@ function buildThreatCard(entry) {
   return card;
 }
 
-function toSpeciesId(name) {
-  return name.toLowerCase().replace(/[-\s]/g, '');
+function toMoveId(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function renderAlerts(container, analysisData, threatMatrix) {
+function renderAlerts(container, analysisData, threatMatrix, opponentAbilities) {
   // Opponent names from analysis data (always available)
   const oppNames = [...new Set(
     (analysisData?.offense ?? []).flatMap(o => o.matchups.map(m => m.opponentName))
   )];
 
-  // Move data from chaos threat matrix (only present when chaos loaded)
+  // Move IDs each opponent runs (chaos-sourced; keys are IDs like "fakeout")
   const oppMovesMap = new Map();
   for (const entry of (threatMatrix ?? [])) {
     oppMovesMap.set(entry.name, new Set(entry.moves ?? []));
   }
 
-  // Opponent ability flags (PS species data — always available)
+  // Opponent ability flags — full PS ability list (slots 0/1/H), pre-fetched in main.js
   const abilityLines = [];
   for (const ability of ALERT_ABILITIES) {
-    const holders = oppNames.filter(n => {
-      const sp = gen.species.get(toSpeciesId(n));
-      return Object.values(sp?.abilities ?? {}).includes(ability);
-    });
+    const holders = oppNames.filter(n => (opponentAbilities?.get(n) ?? []).includes(ability));
     if (holders.length) abilityLines.push(`${ability}: ${holders.join(', ')}`);
   }
 
-  // Opponent move flags (chaos-sourced)
+  // Opponent move flags — chaos keys are move IDs, so normalize the alert names to match
   const moveLines = [];
   for (const move of ALERT_MOVES) {
-    const holders = oppNames.filter(n => oppMovesMap.get(n)?.has(move));
+    const id = toMoveId(move);
+    const holders = oppNames.filter(n => oppMovesMap.get(n)?.has(id));
     if (holders.length) moveLines.push(`${move}: ${holders.join(', ')}`);
   }
 
@@ -197,11 +194,11 @@ function renderAlerts(container, analysisData, threatMatrix) {
   if (moveLines.length) addFlat(container, 'Moves', moveLines, 'summary-cyan');
 }
 
-export function renderSummary(analysisData, container, threatMatrix = null) {
+export function renderSummary(analysisData, container, threatMatrix = null, opponentAbilities = null) {
   container.innerHTML = '';
 
   // ── Flags ───────────────────────────────────────────────────────────────────
-  renderAlerts(container, analysisData, threatMatrix);
+  renderAlerts(container, analysisData, threatMatrix, opponentAbilities);
 
   // ── Opponent threat analysis (from Lead Selector) ───────────────────────────
   if (threatMatrix && threatMatrix.length > 0) {

@@ -14,6 +14,7 @@ import { renderSidebarTracker } from './ui/sidebarTracker.js';
 import { renderMatchupLookup } from './ui/matchupLookup.js';
 import { initLeadSelectorTab } from './ui/leadSelector.js';
 import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
+import { getAbilitiesBatch } from './learnsets.js';
 import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
 import { openSaveMatchModal } from './ui/saveMatchModal.js';
 import { buildSnapshot } from './matchHistory.js';
@@ -45,6 +46,7 @@ document.getElementById('battle-tracker').addEventListener('save-match-click', a
 
 let analysisData      = null;
 let threatMatrix      = null;   // from Lead Selector — shown at top of Summary
+let opponentAbilities = new Map();   // resolved opponent name → full ability list (for Summary flags)
 let currentPlayerSets = null;
 let currentOpponents  = [];  // resolved names
 let unsubscribe       = null;
@@ -114,7 +116,7 @@ async function renderReactive(state) {
 
   // Filter to active (non-KO'd) Pokémon before rendering all tabs
   const filtered = filterByActive(analysisData, state);
-  renderSummary(filtered, document.getElementById('tab-summary'), threatMatrix);
+  renderSummary(filtered, document.getElementById('tab-summary'), threatMatrix, opponentAbilities);
   renderOffense(filtered.offense, filtered.offenseExpanded, document.getElementById('tab-offense'), state);
   renderSidebarTracker(document.getElementById('battle-tracker'), state, currentPlayerSets);
   renderMatchupLookup(filtered, document.getElementById('tab-matchup'), state);
@@ -413,6 +415,16 @@ document.getElementById('calc-btn').addEventListener('click', async () => {
   currentPlayerSets = playerSets;
   currentOpponents  = [...new Set(analysisData.offense.flatMap(o => o.matchups.map(m => m.opponentName)))];
   lastFieldKey      = '';  // reset so field controls take effect on next change
+
+  // ── Opponent abilities for Summary flags (full slots 0/1/H from PS Pokédex) ──
+  opponentAbilities = new Map();
+  try {
+    const idToName = new Map(currentOpponents.map(n => [n.toLowerCase().replace(/[-\s]/g, ''), n]));
+    const batch    = await getAbilitiesBatch([...idToName.keys()]);
+    for (const [id, abilities] of batch) opponentAbilities.set(idToName.get(id), abilities);
+  } catch (e) {
+    console.warn('Opponent ability fetch failed:', e);
+  }
 
   if (unsubscribe) unsubscribe();
   unsubscribe = subscribe(renderReactive);
