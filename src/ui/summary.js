@@ -164,7 +164,7 @@ function toSpeciesId(name) {
   return name.toLowerCase().replace(/[-\s]/g, '');
 }
 
-function renderAlerts(container, analysisData, threatMatrix, playerSets) {
+function renderAlerts(container, analysisData, threatMatrix) {
   // Opponent names from analysis data (always available)
   const oppNames = [...new Set(
     (analysisData?.offense ?? []).flatMap(o => o.matchups.map(m => m.opponentName))
@@ -176,43 +176,32 @@ function renderAlerts(container, analysisData, threatMatrix, playerSets) {
     oppMovesMap.set(entry.name, new Set(entry.moves ?? []));
   }
 
-  // Opponent move flags (chaos-sourced)
-  const oppMoveLines = [];
-  for (const move of ALERT_MOVES) {
-    const holders = oppNames.filter(n => oppMovesMap.get(n)?.has(move));
-    if (holders.length) oppMoveLines.push(`${move}: ${holders.join(', ')}`);
-  }
-
   // Opponent ability flags (PS species data — always available)
-  const oppAbilityLines = [];
+  const abilityLines = [];
   for (const ability of ALERT_ABILITIES) {
     const holders = oppNames.filter(n => {
       const sp = gen.species.get(toSpeciesId(n));
       return Object.values(sp?.abilities ?? {}).includes(ability);
     });
-    if (holders.length) oppAbilityLines.push(`${ability}: ${holders.join(', ')}`);
+    if (holders.length) abilityLines.push(`${ability}: ${holders.join(', ')}`);
   }
 
-  // Your team flags
-  const teamLines = [];
-  for (const set of (playerSets ?? [])) {
-    const flaggedMoves = (set.moves ?? []).filter(m => ALERT_MOVES.has(m));
-    for (const m of flaggedMoves) teamLines.push(`${set.name}: ${m}`);
-    if (set.ability && ALERT_ABILITIES.has(set.ability)) teamLines.push(`${set.name}: ${set.ability}`);
+  // Opponent move flags (chaos-sourced)
+  const moveLines = [];
+  for (const move of ALERT_MOVES) {
+    const holders = oppNames.filter(n => oppMovesMap.get(n)?.has(move));
+    if (holders.length) moveLines.push(`${move}: ${holders.join(', ')}`);
   }
 
-  const oppLines = [...oppMoveLines, ...oppAbilityLines];
-  if (!oppLines.length && !teamLines.length) return;
-
-  if (oppLines.length) addFlat(container, 'Opponent Flags', oppLines, 'summary-cyan');
-  if (teamLines.length) addFlat(container, 'Your Team Flags', teamLines, 'summary-cyan');
+  if (abilityLines.length) addFlat(container, 'Abilities', abilityLines, 'summary-cyan');
+  if (moveLines.length) addFlat(container, 'Moves', moveLines, 'summary-cyan');
 }
 
-export function renderSummary(analysisData, container, threatMatrix = null, playerSets = null) {
+export function renderSummary(analysisData, container, threatMatrix = null) {
   container.innerHTML = '';
 
   // ── Flags ───────────────────────────────────────────────────────────────────
-  renderAlerts(container, analysisData, threatMatrix, playerSets);
+  renderAlerts(container, analysisData, threatMatrix);
 
   // ── Opponent threat analysis (from Lead Selector) ───────────────────────────
   if (threatMatrix && threatMatrix.length > 0) {
