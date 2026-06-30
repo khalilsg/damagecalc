@@ -1,4 +1,22 @@
 import { SKIP_MOVES } from '../leadSelector/score.js';
+import { gen } from '../calcEngine.js';
+
+// ── Configurable alert lists — edit these to add/remove flags ─────────────────
+
+const ALERT_MOVES = new Set([
+  'Fake Out',
+  'Trick Room',
+  'Tailwind',
+  'Encore',
+]);
+
+const ALERT_ABILITIES = new Set([
+  'Levitate',
+  'Defiant',
+  'Competitive',
+  'Unaware',
+  'Contrary',
+]);
 
 const EV_LABELS = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
 
@@ -142,8 +160,59 @@ function buildThreatCard(entry) {
   return card;
 }
 
-export function renderSummary(analysisData, container, threatMatrix = null) {
+function toSpeciesId(name) {
+  return name.toLowerCase().replace(/[-\s]/g, '');
+}
+
+function renderAlerts(container, analysisData, threatMatrix, playerSets) {
+  // Opponent names from analysis data (always available)
+  const oppNames = [...new Set(
+    (analysisData?.offense ?? []).flatMap(o => o.matchups.map(m => m.opponentName))
+  )];
+
+  // Move data from chaos threat matrix (only present when chaos loaded)
+  const oppMovesMap = new Map();
+  for (const entry of (threatMatrix ?? [])) {
+    oppMovesMap.set(entry.name, new Set(entry.moves ?? []));
+  }
+
+  // Opponent move flags (chaos-sourced)
+  const oppMoveLines = [];
+  for (const move of ALERT_MOVES) {
+    const holders = oppNames.filter(n => oppMovesMap.get(n)?.has(move));
+    if (holders.length) oppMoveLines.push(`${move}: ${holders.join(', ')}`);
+  }
+
+  // Opponent ability flags (PS species data — always available)
+  const oppAbilityLines = [];
+  for (const ability of ALERT_ABILITIES) {
+    const holders = oppNames.filter(n => {
+      const sp = gen.species.get(toSpeciesId(n));
+      return Object.values(sp?.abilities ?? {}).includes(ability);
+    });
+    if (holders.length) oppAbilityLines.push(`${ability}: ${holders.join(', ')}`);
+  }
+
+  // Your team flags
+  const teamLines = [];
+  for (const set of (playerSets ?? [])) {
+    const flaggedMoves = (set.moves ?? []).filter(m => ALERT_MOVES.has(m));
+    for (const m of flaggedMoves) teamLines.push(`${set.name}: ${m}`);
+    if (set.ability && ALERT_ABILITIES.has(set.ability)) teamLines.push(`${set.name}: ${set.ability}`);
+  }
+
+  const oppLines = [...oppMoveLines, ...oppAbilityLines];
+  if (!oppLines.length && !teamLines.length) return;
+
+  if (oppLines.length) addFlat(container, 'Opponent Flags', oppLines, 'summary-cyan');
+  if (teamLines.length) addFlat(container, 'Your Team Flags', teamLines, 'summary-cyan');
+}
+
+export function renderSummary(analysisData, container, threatMatrix = null, playerSets = null) {
   container.innerHTML = '';
+
+  // ── Flags ───────────────────────────────────────────────────────────────────
+  renderAlerts(container, analysisData, threatMatrix, playerSets);
 
   // ── Opponent threat analysis (from Lead Selector) ───────────────────────────
   if (threatMatrix && threatMatrix.length > 0) {
