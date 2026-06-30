@@ -3,6 +3,7 @@ import { VERSION } from './version.js';
 const NAV_HEIGHT = 40;
 
 const PAGES = [
+  { label: 'Hub',           href: '/damagecalc/hub.html' },
   { label: 'K Calc',        href: '/damagecalc/' },
   { label: 'Team Builder',  href: '/damagecalc/teambuilder.html' },
   { label: 'Compare',       href: '/damagecalc/compare.html' },

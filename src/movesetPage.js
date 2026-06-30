@@ -278,12 +278,13 @@ async function runSearch({ listAll = false } = {}) {
     const ebst    = bst - Math.min(bs.atk, bs.spa);
     const trspeed = bs.hp + bs.atk + bs.def + bs.spa + bs.spd + (100 - bs.spe);
     const bulk    = 2 * bs.hp + bs.def + bs.spd;
+    const lobulk  = bs.hp + Math.min(bs.def, bs.spd);
     results.push({
       name,
       types: s.types ?? [],
       hp: bs.hp, atk: bs.atk, def: bs.def,
       spa: bs.spa, spd: bs.spd, spe: bs.spe,
-      bst, ebst, trspeed, bulk,
+      bst, ebst, trspeed, bulk, lobulk,
     });
   }
 
@@ -339,13 +340,13 @@ function renderTable() {
   if (results.length === 0) {
     const tr = document.createElement('tr');
     const td = el('td', 'ml-empty', 'No Champions Pokémon match the selected filters.');
-    td.colSpan = 9;
+    td.colSpan = 13;
     tr.append(td);
     tbody.append(tr);
     return;
   }
 
-  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst', 'trspeed', 'bulk'];
+  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst', 'trspeed', 'bulk', 'lobulk'];
 
   for (const row of results) {
     const tr = document.createElement('tr');
@@ -365,7 +366,7 @@ function renderTable() {
 
     for (const key of STAT_KEYS) {
       const sorted = key === sortKey;
-      const isBst = key === 'bst' || key === 'ebst' || key === 'trspeed' || key === 'bulk';
+      const isBst = key === 'bst' || key === 'ebst' || key === 'trspeed' || key === 'bulk' || key === 'lobulk';
       const cls = `ml-td ml-td-stat${isBst ? ' ml-td-bst' : ''}${sorted ? ' ml-td-sorted' : ''}`;
       tr.append(el('td', cls, String(row[key])));
     }

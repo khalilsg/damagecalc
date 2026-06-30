@@ -321,16 +321,17 @@
           <tr>
             <th>Name</th>
             <th>Type</th>
-            <th class="ml-th-sortable" data-sort="hp">HP <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="atk">Atk <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="def">Def <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="spa">SpA <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="spd">SpD <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="spe">Spe <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable active" data-sort="bst">BST <span class="ml-sort-arrow">▼</span></th>
-            <th class="ml-th-sortable" data-sort="ebst">eBST <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="trspeed">TR <span class="ml-sort-arrow"></span></th>
-            <th class="ml-th-sortable" data-sort="bulk">Bulk <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="hp" title="Hit Points">HP <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="atk" title="Attack">Atk <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="def" title="Defense">Def <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="spa" title="Sp. Attack">SpA <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="spd" title="Sp. Defense">SpD <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="spe" title="Speed">Spe <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable active" data-sort="bst" title="Base Stat Total">BST <span class="ml-sort-arrow">▼</span></th>
+            <th class="ml-th-sortable" data-sort="ebst" title="Effective BST — BST minus the weaker offensive stat (min of Atk, SpA)">eBST <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="trspeed" title="Trick Room value — HP + Atk + Def + SpA + SpD + (100 − Spe)">TR <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="bulk" title="Bulk — 2×HP + Def + SpD">Bulk <span class="ml-sort-arrow"></span></th>
+            <th class="ml-th-sortable" data-sort="lobulk" title="Low Bulk — HP + min(Def, SpD)">Lo Blk <span class="ml-sort-arrow"></span></th>
           </tr>
         </thead>
         <tbody id="ml-tbody"></tbody>
