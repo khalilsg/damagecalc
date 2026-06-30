@@ -15,7 +15,7 @@ import { renderMatchupLookup } from './ui/matchupLookup.js';
 import { initLeadSelectorTab } from './ui/leadSelector.js';
 import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
 import { getAbilitiesBatch } from './learnsets.js';
-import { getSavedTeams, setSavedTeams } from './savedTeams.js';
+import { getSavedTeams, setSavedTeams, teamNameFromSpecies } from './savedTeams.js';
 import { scoreLeadPairs, buildThreatMatrix } from './leadSelector/score.js';
 import { openSaveMatchModal } from './ui/saveMatchModal.js';
 import { buildSnapshot } from './matchHistory.js';
@@ -192,7 +192,9 @@ teamSelect.addEventListener('change', () => {
 saveBtn.addEventListener('click', () => {
   const text = teamInput.value.trim();
   if (!text) return;
-  const name = window.prompt('Save team as:', activeSlotName ?? '');
+  let defaultName = '';
+  try { defaultName = teamNameFromSpecies(parseSets(text).map(s => s.name)); } catch { /* malformed paste */ }
+  const name = window.prompt('Save team as:', defaultName || activeSlotName || '');
   if (!name?.trim()) return;
   const trimmed = name.trim();
   const teams = getSavedTeams().filter(t => t.name !== trimmed);

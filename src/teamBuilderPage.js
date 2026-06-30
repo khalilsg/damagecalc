@@ -3,7 +3,7 @@ import { gen } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 import { parseSets } from './parser.js';
 import { TEAMS } from './teams.js';
-import { getSavedTeams, saveTeam, deleteTeam } from './savedTeams.js';
+import { getSavedTeams, saveTeam, deleteTeam, teamNameFromSpecies } from './savedTeams.js';
 
 // [name, label] — sorted by boosted stat (Spe→Atk→SpA→Def→SpD), then by lowered stat same order
 const NATURES = [
@@ -553,7 +553,8 @@ teamSelect.addEventListener('change', async () => {
 saveTeamBtn.addEventListener('click', () => {
   const paste = buildFullPaste();
   if (!paste) { showStatus('No Pokémon added yet.', true); return; }
-  const name = window.prompt('Save team as:', activeTeamName ?? '');
+  const defaultName = teamNameFromSpecies(slotState.map(s => s.name)) || activeTeamName || '';
+  const name = window.prompt('Save team as:', defaultName);
   if (!name?.trim()) return;
   activeTeamName = saveTeam(name, paste);
   deleteTeamBtn.disabled = false;

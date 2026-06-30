@@ -30,3 +30,15 @@ export function saveTeam(name, text) {
 export function deleteTeam(name) {
   setSavedTeams(getSavedTeams().filter(t => t.name !== name));
 }
+
+/**
+ * Default team name: the team's Pokémon, alphabetical, joined by " / ".
+ * @param {string[]} names species names (in any order)
+ * @returns {string}
+ */
+export function teamNameFromSpecies(names) {
+  return (names ?? [])
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b))
+    .join(' / ');
+}

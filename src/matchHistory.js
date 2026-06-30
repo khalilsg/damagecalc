@@ -3,6 +3,8 @@
  * Persistent match history and reasons stored in localStorage.
  */
 
+import { teamNameFromSpecies } from './savedTeams.js';
+
 const HISTORY_KEY = 'kcalc_match_history';
 const REASONS_KEY = 'kcalc_reasons';
 
@@ -58,14 +60,14 @@ export function deleteRecord(id) {
 
 /**
  * Build the pre-filled snapshot shown in the save modal.
- * myTeam.name  defaults to the first 3 Pokémon names joined.
+ * myTeam.name  defaults to the team's Pokémon, alphabetical, joined by " / ".
  * theirTeam comes from whatever the battle tracker recorded.
  */
 export function buildSnapshot(trackerState, playerSets) {
   const myPokemon    = (playerSets ?? []).map(s => s.name).filter(Boolean);
   const theirPokemon = Object.keys(trackerState?.opponentStages ?? {});
   const myTeamName   = myPokemon.length > 0
-    ? myPokemon.slice(0, 3).join(' / ')
+    ? teamNameFromSpecies(myPokemon)
     : 'My Team';
   return {
     myTeam:    { name: myTeamName, pokemon: myPokemon    },
