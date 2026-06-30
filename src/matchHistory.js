@@ -61,11 +61,14 @@ export function deleteRecord(id) {
 /**
  * Build the pre-filled snapshot shown in the save modal.
  * myTeam.name  defaults to the team's Pokémon, alphabetical, joined by " / ".
- * theirTeam comes from whatever the battle tracker recorded.
+ * Both teams use the full rosters from analysis, so Pokémon removed (KO'd)
+ * from the battle tracker are still recorded in the saved match.
  */
-export function buildSnapshot(trackerState, playerSets) {
+export function buildSnapshot(trackerState, playerSets, opponentNames) {
   const myPokemon    = (playerSets ?? []).map(s => s.name).filter(Boolean);
-  const theirPokemon = Object.keys(trackerState?.opponentStages ?? {});
+  const theirPokemon = opponentNames?.length
+    ? [...opponentNames]
+    : Object.keys(trackerState?.opponentStages ?? {});
   const myTeamName   = myPokemon.length > 0
     ? teamNameFromSpecies(myPokemon)
     : 'My Team';

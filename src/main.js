@@ -35,7 +35,7 @@ document.getElementById('pokebench-link').addEventListener('click', e => {
 
 // ── Save Match — listen for button click from sidebar ─────────────────────────
 document.getElementById('battle-tracker').addEventListener('save-match-click', async () => {
-  const snapshot = buildSnapshot(getState(), currentPlayerSets);
+  const snapshot = buildSnapshot(getState(), currentPlayerSets, currentOpponents);
   await openSaveMatchModal(snapshot);
   // Re-render sidebar so match count badge updates
   renderSidebarTracker(
