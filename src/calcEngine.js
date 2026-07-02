@@ -415,15 +415,25 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
         if (cat === 'status') continue;
         const atkStat = getOffensiveStat(moveName, cat);
         const defStat = cat === 'special' ? 'spd' : 'def';
-        const grid = {};
-        for (const oppStage of STAGES) {
-          for (const myStage of STAGES) {
-            const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
-            const defender = makeAttacker(set, playerName, { [defStat]: myStage });
-            grid[`${oppStage},${myStage}`] = stripDefenderName(calcResult(attacker, defender, moveName, defenseField), playerName);
+        // Same offensive archetypes as the normal defense view, so the live
+        // view keeps both bars (e.g. Max Atk + Min Atk) instead of collapsing.
+        const archetypes = cat === 'special'
+          ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
+          : OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max SpAtk');
+        const grids = archetypes.map(arch => {
+          const grid = {};
+          for (const oppStage of STAGES) {
+            for (const myStage of STAGES) {
+              const attacker = makeArchetypeOpponent(resolvedOpp, arch, { [atkStat]: oppStage });
+              const defender = makeAttacker(set, playerName, { [defStat]: myStage });
+              grid[`${oppStage},${myStage}`] = stripDefenderName(calcResult(attacker, defender, moveName, defenseField), playerName);
+            }
           }
-        }
-        defExpMatchup.moveCalcs.push({ moveName, category: cat, grid });
+          return { archetype: arch.label, grid };
+        });
+        // Keep `grid` = Min Offense grid for back-compat (Defense Expanded + Matchup Lookup tabs).
+        const minOffGrid = grids.find(g => g.archetype === MIN_OFFENSE.label)?.grid ?? {};
+        defExpMatchup.moveCalcs.push({ moveName, category: cat, grids, grid: minOffGrid });
       }
       playerDefenseExp.push(defExpMatchup);
 

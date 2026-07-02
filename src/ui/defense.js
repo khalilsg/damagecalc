@@ -128,33 +128,6 @@ function buildDefMoveBlock(moveName, archs, liveBadge = false) {
   return block;
 }
 
-// ── Live-stages single-archetype block (no label column) ─────────────────────
-
-function buildLiveDefBlock(moveName, classification, minPct, maxPct) {
-  const block = el('div', 'mv-visual-row');
-
-  const top = el('div', 'mv-visual-top');
-  const nameSpan = el('span', 'mv-name');
-  nameSpan.textContent = moveName;
-  top.appendChild(nameSpan);
-  const tag = buildDefTag(classification, maxPct);
-  if (tag) top.appendChild(tag);
-  block.appendChild(top);
-
-  if ((maxPct ?? 0) > 0) {
-    const bot = el('div', 'mv-visual-bot');
-    const track = el('div', 'mv-track');
-    applyDefBar(track, minPct, maxPct);
-    bot.appendChild(track);
-    const pctSpan = el('span', 'mv-pct');
-    pctSpan.textContent = pctRange(minPct, maxPct);
-    bot.appendChild(pctSpan);
-    block.appendChild(bot);
-  }
-
-  return block;
-}
-
 // ── Main renderer ─────────────────────────────────────────────────────────────
 
 export function renderDefense(defenseData, defenseExpandedData, container, state) {
@@ -188,19 +161,25 @@ export function renderDefense(defenseData, defenseExpandedData, container, state
       }
 
       if (hasLiveStages && expandedPlayer) {
-        // Live stages: single cell per move from the expanded grid
+        // Live stages: keep the same per-archetype bars as the normal view,
+        // but read the values at the current opponent/defender stat stages.
         const expandedMatchup = expandedPlayer.matchups.find(m => m.opponentName === opponentName);
         if (expandedMatchup) {
           let hasRows = false;
-          for (const { moveName, category, grid } of expandedMatchup.moveCalcs) {
+          for (const { moveName, category, grids } of expandedMatchup.moveCalcs) {
             const atkStat  = getOffensiveStat(moveName, category);
             const defStat  = category === 'special' ? 'spd' : 'def';
             const oppStage = clampStage(oppStages[atkStat] ?? 0);
             const myStage  = clampStage(myStages[defStat]  ?? 0);
-            const cell     = grid[`${oppStage},${myStage}`];
-            if (!cell) continue;
+            const archs = [];
+            for (const { archetype, grid } of (grids ?? [])) {
+              const cell = grid[`${oppStage},${myStage}`];
+              if (!cell) continue;
+              archs.push({ archetype, classification: cell.classification, minPct: cell.minPct, maxPct: cell.maxPct });
+            }
+            if (archs.length === 0) continue;
             hasRows = true;
-            card.appendChild(buildLiveDefBlock(moveName, cell.classification, cell.minPct, cell.maxPct));
+            card.appendChild(buildDefMoveBlock(moveName, archs));
           }
           if (!hasRows && trackedMoves.length === 0) {
             card.appendChild(emptyNote('No data at current stages.'));
