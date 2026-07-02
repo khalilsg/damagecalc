@@ -1,3 +1,5 @@
+import { getOffensiveStat } from '../calcEngine.js';
+
 // Module-level selection state persists across reactive re-renders
 let selectedPlayer   = null;
 let selectedOpponent = null;
@@ -134,7 +136,7 @@ function buildMatchupCard(title, hasHH, expandedData, type, playerName, opponent
 
   let hasRows = false;
   for (const { moveName, category, grid } of data.moveCalcs) {
-    const atkStat = category === 'special' ? 'spa' : 'atk';
+    const atkStat = getOffensiveStat(moveName, category);
     const defStat = category === 'special' ? 'spd' : 'def';
 
     const cell = type === 'offense'
