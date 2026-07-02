@@ -1,3 +1,5 @@
+import { getOffensiveStat } from '../calcEngine.js';
+
 function clampStage(n) { return Math.max(-6, Math.min(6, n ?? 0)); }
 
 // ── Color helpers (damage bar) ────────────────────────────────────────────────
@@ -180,7 +182,7 @@ export function renderOffense(offenseData, offenseExpandedData, container, state
         if (expandedMatchup) {
           let hasRows = false;
           for (const { moveName, category, grid } of expandedMatchup.moveCalcs) {
-            const atkStat  = category === 'special' ? 'spa' : 'atk';
+            const atkStat  = getOffensiveStat(moveName, category);
             const defStat  = category === 'special' ? 'spd' : 'def';
             const myStage  = clampStage(myStages[atkStat]  ?? 0);
             const oppStage = clampStage(oppStages[defStat] ?? 0);

@@ -1,3 +1,5 @@
+import { getOffensiveStat } from '../calcEngine.js';
+
 function clampStage(n) { return Math.max(-6, Math.min(6, n ?? 0)); }
 
 // ── Color helpers (incoming damage — danger palette) ──────────────────────────
@@ -191,7 +193,7 @@ export function renderDefense(defenseData, defenseExpandedData, container, state
         if (expandedMatchup) {
           let hasRows = false;
           for (const { moveName, category, grid } of expandedMatchup.moveCalcs) {
-            const atkStat  = category === 'special' ? 'spa' : 'atk';
+            const atkStat  = getOffensiveStat(moveName, category);
             const defStat  = category === 'special' ? 'spd' : 'def';
             const oppStage = clampStage(oppStages[atkStat] ?? 0);
             const myStage  = clampStage(myStages[defStat]  ?? 0);

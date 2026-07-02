@@ -1,3 +1,5 @@
+import { getOffensiveStat } from '../calcEngine.js';
+
 function clampStage(n) { return Math.max(-6, Math.min(6, n ?? 0)); }
 
 export function renderOffenseExpanded(offenseExpandedData, container, state) {
@@ -12,9 +14,8 @@ export function renderOffenseExpanded(offenseExpandedData, container, state) {
       card.appendChild(cardHeader(`vs. ${opponentName}`));
       let hasRows = false;
       for (const { moveName, category, grid } of moveCalcs) {
-        const myStage = clampStage(category === 'special'
-          ? state?.myStages?.[playerName]?.spa
-          : state?.myStages?.[playerName]?.atk);
+        const atkStat = getOffensiveStat(moveName, category);
+        const myStage = clampStage(state?.myStages?.[playerName]?.[atkStat]);
         const oppStage = clampStage(category === 'special'
           ? state?.opponentStages?.[opponentName]?.spd
           : state?.opponentStages?.[opponentName]?.def);

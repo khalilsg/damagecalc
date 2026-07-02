@@ -182,6 +182,17 @@ function getMoveCategory(moveName) {
   try { return new Move(gen, moveName).category?.toLowerCase() ?? 'physical'; } catch { return 'physical'; }
 }
 
+// Moves whose damage is computed from a non-standard attacking stat.
+// (Body Press uses the user's Defense instead of Attack.)
+const MOVE_OFFENSIVE_STAT = { 'body press': 'def' };
+
+// The stat that determines a move's damage output for the attacker. Used to
+// pick which stat-stage axis drives the live-stage grids and lookups.
+export function getOffensiveStat(moveName, category) {
+  return MOVE_OFFENSIVE_STAT[(moveName ?? '').toLowerCase()]
+    ?? (category === 'special' ? 'spa' : 'atk');
+}
+
 function classifyKO(kochance) {
   if (!kochance || kochance === 'N/A') return null;
   if (kochance === 'guaranteed OHKO') return 'guaranteed-ohko';
@@ -344,7 +355,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
       for (const moveName of offenseMoves) {
         const cat = getMoveCategory(moveName);
         if (cat === 'status') continue;
-        const atkStat = cat === 'special' ? 'spa' : 'atk';
+        const atkStat = getOffensiveStat(moveName, cat);
         const defStat = cat === 'special' ? 'spd' : 'def';
         const grid = {};
         for (const myStage of STAGES) {
@@ -392,7 +403,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
       for (const moveName of commonMoves) {
         const cat = getMoveCategory(moveName);
         if (cat === 'status') continue;
-        const atkStat = cat === 'special' ? 'spa' : 'atk';
+        const atkStat = getOffensiveStat(moveName, cat);
         const defStat = cat === 'special' ? 'spd' : 'def';
         const grid = {};
         for (const oppStage of STAGES) {
@@ -478,7 +489,7 @@ export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOp
 
   const resolvedOpp = resolveSpeciesName(opponentName);
   const playerName  = resolveSpeciesName(playerSet.name);
-  const atkStat = cat === 'special' ? 'spa' : 'atk';
+  const atkStat = getOffensiveStat(moveName, cat);
   const defStat = cat === 'special' ? 'spd' : 'def';
   const field = buildField(
     fieldOptions.weather ?? null,

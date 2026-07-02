@@ -1,3 +1,5 @@
+import { getOffensiveStat } from '../calcEngine.js';
+
 function clampStage(n) { return Math.max(-6, Math.min(6, n ?? 0)); }
 
 export function renderDefenseExpanded(defenseExpandedData, container, state) {
@@ -17,9 +19,8 @@ export function renderDefenseExpanded(defenseExpandedData, container, state) {
         const playerGrid = (defGrids ?? []).find(g => g.playerName === playerName);
         if (!playerGrid) continue;
         const { category, grid } = playerGrid;
-        const oppStage = clampStage(category === 'special'
-          ? state?.opponentStages?.[opponentName]?.spa
-          : state?.opponentStages?.[opponentName]?.atk);
+        const atkStat = getOffensiveStat(moveName, category);
+        const oppStage = clampStage(state?.opponentStages?.[opponentName]?.[atkStat]);
         const myStage = clampStage(category === 'special'
           ? state?.myStages?.[playerName]?.spd
           : state?.myStages?.[playerName]?.def);
@@ -39,9 +40,8 @@ export function renderDefenseExpanded(defenseExpandedData, container, state) {
 
       // Precomputed common moves
       for (const { moveName, category, grid } of moveCalcs) {
-        const oppStage = clampStage(category === 'special'
-          ? state?.opponentStages?.[opponentName]?.spa
-          : state?.opponentStages?.[opponentName]?.atk);
+        const atkStat = getOffensiveStat(moveName, category);
+        const oppStage = clampStage(state?.opponentStages?.[opponentName]?.[atkStat]);
         const myStage = clampStage(category === 'special'
           ? state?.myStages?.[playerName]?.spd
           : state?.myStages?.[playerName]?.def);
