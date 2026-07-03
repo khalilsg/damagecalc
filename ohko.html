@@ -154,6 +154,13 @@
     .ok-btn:hover    { background: #333; }
     .ok-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+    .ok-btn-secondary {
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    .ok-btn-secondary:hover { background: #f0f0f0; }
+
     .ok-error { color: #c0392b; font-size: 0.82rem; margin-top: 8px; min-height: 18px; }
 
     /* ── Results ── */
@@ -301,6 +308,8 @@
         <input id="ok-opp-input" class="ok-input" placeholder="Add opponent Pokémon…" autocomplete="off" />
         <div id="ok-opp-dd" class="ok-dropdown"></div>
       </div>
+      <button type="button" id="ok-top50-btn" class="ok-btn ok-btn-secondary">Add Top 50</button>
+      <button type="button" id="ok-opp-clear-btn" class="ok-btn ok-btn-secondary">Clear</button>
     </div>
     <div id="ok-opp-chips" class="ok-chips"></div>
 

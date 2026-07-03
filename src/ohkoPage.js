@@ -1,6 +1,7 @@
 import './siteHeader.js';
 import { gen, computeOhkoThresholds } from './calcEngine.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getChampionsMegaForms, getAbilitiesBatch } from './learnsets.js';
+import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
 
 const STAT_LABELS = { atk: 'Atk', spa: 'SpA', def: 'Def' };
 
@@ -221,6 +222,39 @@ initAC({
     renderChips();
     updateBtn();
   },
+});
+
+// ── Add Top 50 / Clear ────────────────────────────────────────────────────────
+
+const top50Btn    = document.getElementById('ok-top50-btn');
+const oppClearBtn = document.getElementById('ok-opp-clear-btn');
+
+top50Btn.addEventListener('click', async () => {
+  errorEl.textContent = '';
+  top50Btn.disabled = true;
+  top50Btn.textContent = 'Loading…';
+  try {
+    // Same default format as K Calc (first entry in KNOWN_FORMATS)
+    const chaos = await loadChaosData(KNOWN_FORMATS[0].prefix);
+    const top = Object.entries(chaos.data ?? {})
+      .sort((a, b) => (b[1].usage ?? 0) - (a[1].usage ?? 0))
+      .slice(0, 50)
+      .map(([name]) => name);
+    for (const name of top) if (!opponents.includes(name)) opponents.push(name);
+    renderChips();
+    updateBtn();
+  } catch (e) {
+    errorEl.textContent = `Failed to load usage stats: ${e.message}`;
+  } finally {
+    top50Btn.textContent = 'Add Top 50';
+    top50Btn.disabled = false;
+  }
+});
+
+oppClearBtn.addEventListener('click', () => {
+  opponents = [];
+  renderChips();
+  updateBtn();
 });
 
 // ── Results rendering ─────────────────────────────────────────────────────────
