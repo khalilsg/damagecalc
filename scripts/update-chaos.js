@@ -11,7 +11,14 @@
  *
  * Usage:
  *   node scripts/update-chaos.js --month 2026-04 --prefix gen9championsvgc2026regmabo3
- *   node scripts/update-chaos.js --month 2026-04   # all known Champions prefixes
+ *   node scripts/update-chaos.js --month 2026-04   # auto-discover all VGC formats
+ *
+ * With no --prefix, the script reads the Smogon monthly directory listing and
+ * pulls every `gen9championsvgc*-0.json` format it finds (so new regulations are
+ * picked up automatically), plus the static non-VGC prefixes below.
+ *
+ * Exit codes: 0 = at least one file written; 2 = month not published yet or no
+ * VGC formats found (the scheduled task uses this to fire a failure notification).
  *
  * Run locally once per month when new Smogon stats drop, then commit the
  * updated files in public/data/chaos/.
@@ -32,9 +39,9 @@ import { fileURLToPath }            from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR   = join(__dirname, '..', 'public', 'data', 'chaos');
 
-const DEFAULT_PREFIXES = [
-  'gen9championsvgc2026regmabo3',
-  'gen9championsvgc2026regma',
+// Non-VGC formats we always want. VGC formats are auto-discovered from the
+// monthly directory listing so new regulations (regmb, regmc, …) are picked up.
+const STATIC_PREFIXES = [
   'gen9championsbssregma',
 ];
 
@@ -55,7 +62,17 @@ if (!month) {
   process.exit(1);
 }
 
-const prefixes = prefix ? [prefix] : DEFAULT_PREFIXES;
+// ── Discover VGC formats from the monthly directory listing ───────────────────
+
+async function discoverVgcPrefixes(month) {
+  const dirUrl = `https://www.smogon.com/stats/${month}/chaos/`;
+  const res = await fetch(dirUrl);
+  if (!res.ok) throw new Error(`directory listing ${dirUrl} → HTTP ${res.status}`);
+  const html = await res.text();
+  const found = [...html.matchAll(/href="(gen9championsvgc[^"]*?)-0\.json"/g)]
+    .map((m) => m[1]);
+  return [...new Set(found)].sort();
+}
 
 // ── Trim one species entry ────────────────────────────────────────────────────
 
@@ -79,6 +96,28 @@ function trimEntry(info) {
 // ── Fetch + trim + write ──────────────────────────────────────────────────────
 
 mkdirSync(OUT_DIR, { recursive: true });
+
+let prefixes;
+if (prefix) {
+  prefixes = [prefix];
+} else {
+  let vgc;
+  try {
+    vgc = await discoverVgcPrefixes(month);
+  } catch (e) {
+    console.error(`FAILED to read Smogon stats for ${month}: ${e.message}`);
+    console.error('Stats are likely not published yet — retry in a few days.');
+    process.exit(2);
+  }
+  if (vgc.length === 0) {
+    console.error(`No gen9championsvgc formats found for ${month} — stats not published yet.`);
+    process.exit(2);
+  }
+  console.log(`Discovered VGC formats for ${month}: ${vgc.join(', ')}\n`);
+  prefixes = [...new Set([...vgc, ...STATIC_PREFIXES])];
+}
+
+let written = 0;
 
 for (const p of prefixes) {
   const url = `https://www.smogon.com/stats/${month}/chaos/${p}-0.json`;
@@ -112,6 +151,7 @@ for (const p of prefixes) {
   const trimSize = outJson.length;
   const outPath  = join(OUT_DIR, `${p}.json`);
   writeFileSync(outPath, outJson);
+  written++;
 
   const rawKB  = (rawSize  / 1024).toFixed(0);
   const trimKB = (trimSize / 1024).toFixed(0);
@@ -119,4 +159,9 @@ for (const p of prefixes) {
   console.log(`OK  ${rawKB} KB → ${trimKB} KB (${pct}% smaller)`);
 }
 
-console.log('\nDone. Commit the updated files in public/data/chaos/.');
+if (written === 0) {
+  console.error(`\nFAILED: no files written for ${month}.`);
+  process.exit(2);
+}
+
+console.log(`\nDone. Wrote ${written} file(s). Commit the updated files in public/data/chaos/.`);

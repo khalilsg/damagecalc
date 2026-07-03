@@ -9,6 +9,8 @@
  */
 
 export const KNOWN_FORMATS = [
+  { label: 'VGC 2026 Reg MB Bo3', prefix: 'gen9championsvgc2026regmbbo3' },
+  { label: 'VGC 2026 Reg MB',     prefix: 'gen9championsvgc2026regmb'    },
   { label: 'VGC 2026 Reg MA Bo3', prefix: 'gen9championsvgc2026regmabo3' },
   { label: 'VGC 2026 Reg MA',     prefix: 'gen9championsvgc2026regma'    },
   { label: 'BSS Reg MA',          prefix: 'gen9championsbssregma'        },
