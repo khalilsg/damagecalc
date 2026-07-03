@@ -83,7 +83,8 @@ export function parseSets(text) {
       else if (trimmed.startsWith('EVs:'))       set.evs = parseEvs(trimmed.replace('EVs:', '').trim());
       else if (trimmed.startsWith('IVs:'))       set.ivs = parseIvs(trimmed.replace('IVs:', '').trim());
       else if (trimmed.startsWith('Tera Type:')) set.teraType = trimmed.replace('Tera Type:', '').trim();
-      else if (trimmed.includes('Nature'))       set.nature = trimmed.replace('Nature', '').trim();
+      else if (trimmed.startsWith('Nature:'))    set.nature = trimmed.replace('Nature:', '').trim();  // "Nature: Bold"
+      else if (trimmed.includes('Nature'))       set.nature = trimmed.replace('Nature', '').trim();   // "Bold Nature"
       else if (trimmed.startsWith('-'))          set.moves.push(trimmed.replace(/^-\s*/, '').trim());
     }
 
