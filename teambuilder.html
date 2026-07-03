@@ -377,6 +377,43 @@
       min-width: 200px;
       max-width: 360px;
     }
+
+    /* ── Team code / share ── */
+    .tb-share {
+      max-width: 940px;
+      margin-bottom: 12px;
+    }
+    .tb-share .tb-label { display: block; margin-bottom: 4px; }
+    .tb-share-hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: #aaa; }
+    .tb-share .tb-input { max-width: 460px; }
+
+    .tb-code-display {
+      max-width: 940px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 10px 16px;
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+    }
+    .tb-code-display-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #a67c00;
+    }
+    .tb-code-display-value {
+      font-family: 'Menlo', 'Monaco', 'Consolas', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #5d4600;
+      letter-spacing: 0.5px;
+      user-select: all;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -394,6 +431,18 @@
     </select>
     <button id="tb-save-btn" class="tb-btn tb-btn-secondary">SAVE TEAM</button>
     <button id="tb-delete-btn" class="tb-btn tb-btn-secondary" disabled>DELETE</button>
+  </div>
+
+  <div class="tb-share">
+    <label class="tb-label" for="tb-code-input">Team Code
+      <span class="tb-share-hint">— optional; shared with the link so others can enter it in-game</span>
+    </label>
+    <input id="tb-code-input" class="tb-input" placeholder="e.g. your in-game rental/team code" autocomplete="off" spellcheck="false" />
+  </div>
+
+  <div id="tb-code-display" class="tb-code-display" hidden>
+    <span class="tb-code-display-label">Team&nbsp;Code</span>
+    <span id="tb-code-display-value" class="tb-code-display-value"></span>
   </div>
 
   <details class="tb-import" id="tb-import">
@@ -414,6 +463,7 @@
     <button id="tb-load-btn" class="tb-btn">LOAD INTO K CALC</button>
     <button id="tb-pokebench-btn" class="tb-btn tb-btn-secondary">OPEN IN POKÉBENCH</button>
     <button id="tb-copy-btn" class="tb-btn tb-btn-secondary">COPY TEAM</button>
+    <button id="tb-share-btn" class="tb-btn tb-btn-secondary">SHARE LINK</button>
     <span id="tb-status"></span>
   </div>
 

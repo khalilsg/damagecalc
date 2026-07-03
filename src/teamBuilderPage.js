@@ -423,13 +423,52 @@ async function importFromPaste(text) {
 const copyBtn      = document.getElementById('tb-copy-btn');
 const loadBtn      = document.getElementById('tb-load-btn');
 const pokebenchBtn = document.getElementById('tb-pokebench-btn');
+const shareBtn     = document.getElementById('tb-share-btn');
 const statusEl     = document.getElementById('tb-status');
+
+const codeInput        = document.getElementById('tb-code-input');
+const codeDisplay      = document.getElementById('tb-code-display');
+const codeDisplayValue = document.getElementById('tb-code-display-value');
 
 function showStatus(msg, isError = false) {
   statusEl.textContent = msg;
   statusEl.style.color = isError ? '#c0392b' : '#2e7d32';
   setTimeout(() => { statusEl.textContent = ''; }, 2500);
 }
+
+// ── Team code (optional, in-game share code) ──────────────────────────────────
+
+function setCode(code) {
+  codeInput.value = code ?? '';
+  updateCodeDisplay();
+}
+
+function updateCodeDisplay() {
+  const code = codeInput.value.trim();
+  codeDisplayValue.textContent = code;
+  codeDisplay.hidden = !code;
+}
+
+codeInput.addEventListener('input', updateCodeDisplay);
+
+// ── Share link (team paste + optional code encoded in the URL) ────────────────
+
+shareBtn.addEventListener('click', async () => {
+  const paste = buildFullPaste();
+  if (!paste) { showStatus('No Pokémon added yet.', true); return; }
+  const encoded = btoa(unescape(encodeURIComponent(paste)));
+  let url = `${location.origin}${location.pathname}?team=${encoded}`;
+  const code = codeInput.value.trim();
+  if (code) url += `&code=${encodeURIComponent(code)}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    const orig = shareBtn.textContent;
+    shareBtn.textContent = 'LINK COPIED!';
+    setTimeout(() => { shareBtn.textContent = orig; }, 1500);
+  } catch {
+    window.prompt('Copy this share link:', url);
+  }
+});
 
 copyBtn.addEventListener('click', async () => {
   const paste = buildFullPaste();
@@ -527,12 +566,14 @@ teamSelect.addEventListener('change', async () => {
   const val = teamSelect.value;
   teamSelect.value = '';
 
-  let text = null, name = null, fromSaved = false;
+  let text = null, name = null, fromSaved = false, code = '';
   if (val.startsWith('preset:')) {
     text = TEAMS.find(t => t.name === val.slice(7))?.text ?? null;
   } else if (val.startsWith('saved:')) {
     name = val.slice(6);
-    text = getSavedTeams().find(t => t.name === name)?.text ?? null;
+    const saved = getSavedTeams().find(t => t.name === name);
+    text = saved?.text ?? null;
+    code = saved?.code ?? '';
     fromSaved = true;
   }
   if (!text) return;
@@ -540,6 +581,7 @@ teamSelect.addEventListener('change', async () => {
   teamSelect.disabled = true;
   try {
     const count = await importFromPaste(text);
+    setCode(code);   // loading a team replaces the code (presets have none)
     activeTeamName = fromSaved ? name : null;
     deleteTeamBtn.disabled = !activeTeamName;
     showStatus(`${count} Pokémon loaded.`);
@@ -556,7 +598,7 @@ saveTeamBtn.addEventListener('click', () => {
   const defaultName = teamNameFromSpecies(slotState.map(s => s.name)) || activeTeamName || '';
   const name = window.prompt('Save team as:', defaultName);
   if (!name?.trim()) return;
-  activeTeamName = saveTeam(name, paste);
+  activeTeamName = saveTeam(name, paste, codeInput.value.trim());
   deleteTeamBtn.disabled = false;
   rebuildTeamDropdown();
   showStatus(`Saved "${activeTeamName}".`);
@@ -573,3 +615,25 @@ deleteTeamBtn.addEventListener('click', () => {
 });
 
 rebuildTeamDropdown();
+
+// ── Load a shared team from the URL (?team=<base64>&code=<text>) ───────────────
+
+(async function checkSharedLink() {
+  const params    = new URLSearchParams(location.search);
+  const teamParam = params.get('team');
+  const codeParam = params.get('code');
+
+  if (codeParam) setCode(codeParam);
+
+  if (teamParam) {
+    let paste;
+    try { paste = decodeURIComponent(escape(atob(teamParam))); }
+    catch { showStatus('Shared link is malformed.', true); return; }
+    try {
+      const count = await importFromPaste(paste);
+      showStatus(`${count} Pokémon loaded from shared link.`);
+    } catch (e) {
+      showStatus(e.message, true);
+    }
+  }
+})();
