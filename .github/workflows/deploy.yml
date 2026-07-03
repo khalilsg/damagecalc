@@ -2,6 +2,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+
+# Serialize deploys so overlapping pushes don't race the single Pages
+# environment (a known cause of "Deployment failed, try again later").
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
