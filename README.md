@@ -18,6 +18,7 @@ All tools use `@smogon/calc` for damage calculations. Champions-format EVs (0–
 | **PokéBench** | Web and CLI tool — benchmark a Pokémon against real Smogon usage data |
 | **Compare** | Side-by-side base stat butterfly chart + full Champions movepools for any two Pokémon |
 | **PokéFinder** | Filter every Champions-legal Pokémon by moves and/or ability; sort results by any stat |
+| **OHKO Calc** | Find the exact Atk/SpA stat needed to guarantee an OHKO on each opponent with a given move |
 | **Match History** | Log and review matches with per-game results, team snapshots, and TSV export |
 
 ---
@@ -272,6 +273,17 @@ Filter every Champions-legal Pokémon by the moves and/or ability they can learn
 | Lo Blk | Low bulk — HP + min(Def, SpD) |
 
 All columns are sortable. Hover any column header to see its formula.
+
+---
+
+## OHKO Calc
+
+Given your Pokémon's species, item, and move, plus a list of opponents, finds the **minimum attacking stat value** (Atk, SpA — or Def for Body Press) that guarantees an OHKO on each opponent.
+
+- Each opponent is checked against two spreads: the matching defensive archetype (Bold 32 HP/32 Def or Calm 32 HP/32 SpD) and neutral (Serious, 0 EVs)
+- Achievable thresholds show the cheapest nature + Champions EV investment that reaches them
+- Thresholds above the species' maximum stat are flagged **impossible**; immunities are flagged **no damage**
+- Assumes level 50, default ability, full HP, no boosts, neutral field
 
 ---
 

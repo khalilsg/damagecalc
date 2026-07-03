@@ -528,3 +528,107 @@ export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOp
   }
   return { playerName, moveName, category: cat, grid };
 }
+
+// --- OHKO stat thresholds ---
+
+// Positive nature for each offensive stat (used for the achievable-stat ceiling).
+const PLUS_NATURE = { atk: 'Adamant', spa: 'Modest', def: 'Bold' };
+
+// Raw-stat search window for the threshold binary search.
+const OHKO_STAT_MIN = 21;   // base 1 at level 50, neutral, 31 IV, 0 EV
+const OHKO_STAT_MAX = 999;
+
+/**
+ * For a given attacker (species + item + move), find the minimum raw
+ * attacking-stat value that guarantees an OHKO (min roll ≥ 100%) on each
+ * opponent, against both the matching defensive archetype and Min Defense.
+ *
+ * Probes arbitrary stat values by overriding the attacker's base stat so the
+ * level-50 neutral 0-EV raw stat lands exactly on the probed value.
+ *
+ * @param {{ name: string, item?: string, move: string }} attacker
+ * @param {string[]} opponentNames
+ * @returns {{
+ *   playerName, move, category, statKey, minStat, maxStat,
+ *   results: [{ opponentName, rows: [{
+ *     archetype, nature, evLabel,
+ *     needed: number|null,   // min raw stat for guaranteed OHKO (null = never)
+ *     noDamage: boolean,     // move deals no damage (immunity)
+ *     possible: boolean,     // needed ≤ species max
+ *     investment: { nature, evs }|null,  // cheapest spread reaching `needed`
+ *   }] }]
+ * }}
+ */
+export function computeOhkoThresholds(attacker, opponentNames) {
+  const playerName = resolveSpeciesName(attacker.name);
+  const moveName   = attacker.move;
+  const cat        = getMoveCategory(moveName);
+  if (cat === 'status') throw new Error(`${moveName} is a status move — it can't OHKO.`);
+
+  const statKey   = getOffensiveStat(moveName, cat);
+  const field     = buildField(null, {}, {});
+  const item      = resolveItem(attacker.item);
+  const baseStats = gen.species.get(toSpeciesId(playerName)).baseStats;
+
+  // Attacker with its attacking stat forced to an exact raw value.
+  const probe = raw => new Pokemon(gen, playerName, {
+    level: 50, nature: 'Serious', item,
+    overrides: { baseStats: { ...baseStats, [statKey]: raw - 20 } },
+  });
+
+  const minRollPct = (raw, defender) => {
+    const r = calcResult(probe(raw), defender, moveName, field);
+    return r ? r.minPct : null;   // null = no damage
+  };
+
+  // Achievable raw-stat range for this species (level 50, 31 IV, Champions EVs).
+  const statOf = (nature, evs) =>
+    new Pokemon(gen, playerName, { level: 50, nature, evs: scaleEVs(evs) }).rawStats[statKey];
+  const minStat = statOf('Serious', {});
+  const maxStat = statOf(PLUS_NATURE[statKey] ?? 'Serious', { [statKey]: 32 });
+
+  // Cheapest nature + Champions EVs whose raw stat reaches `target`.
+  function investmentFor(target) {
+    for (const nature of ['Serious', PLUS_NATURE[statKey] ?? 'Serious']) {
+      for (let ev = 0; ev <= 32; ev++) {
+        if (statOf(nature, { [statKey]: ev }) >= target) return { nature, evs: ev };
+      }
+    }
+    return null;
+  }
+
+  // Min raw stat guaranteeing the OHKO, or null flags.
+  function threshold(defender) {
+    const capPct = minRollPct(OHKO_STAT_MAX, defender);
+    if (capPct === null)  return { needed: null, noDamage: true };
+    if (capPct < 100)     return { needed: null, noDamage: false };
+    if ((minRollPct(OHKO_STAT_MIN, defender) ?? 0) >= 100) return { needed: OHKO_STAT_MIN, noDamage: false };
+    let lo = OHKO_STAT_MIN, hi = OHKO_STAT_MAX;   // invariant: lo fails, hi succeeds
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if ((minRollPct(mid, defender) ?? 0) >= 100) hi = mid; else lo = mid;
+    }
+    return { needed: hi, noDamage: false };
+  }
+
+  const archetypes = cat === 'special'
+    ? [DEFENSE_ARCHETYPES[0], MIN_DEFENSE]   // Max SpDef + Min Defense
+    : [DEFENSE_ARCHETYPES[1], MIN_DEFENSE];  // Max Def + Min Defense
+
+  const results = opponentNames.map(oppName => {
+    const resolvedOpp = resolveSpeciesName(oppName);
+    const rows = archetypes.map(arch => {
+      const { needed, noDamage } = threshold(makeArchetypeOpponent(resolvedOpp, arch));
+      const possible = needed !== null && needed <= maxStat;
+      return {
+        archetype: arch.label,
+        nature:    arch.nature,
+        needed, noDamage, possible,
+        investment: possible && needed > minStat ? investmentFor(needed) : null,
+      };
+    });
+    return { opponentName: resolvedOpp, rows };
+  });
+
+  return { playerName, move: moveName, category: cat, statKey, minStat, maxStat, results };
+}

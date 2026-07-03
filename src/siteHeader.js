@@ -8,6 +8,7 @@ const PAGES = [
   { label: 'Team Builder',  href: '/damagecalc/teambuilder.html' },
   { label: 'Compare',       href: '/damagecalc/compare.html' },
   { label: 'PokéFinder',    href: '/damagecalc/moveset.html' },
+  { label: 'OHKO Calc',     href: '/damagecalc/ohko.html' },
   { label: 'Match History', href: '/damagecalc/history.html' },
   { label: 'PokéBench',     href: '/damagecalc/pokebench/' },
 ];

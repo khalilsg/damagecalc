@@ -1,2 +1,2 @@
 // Bump this string on every push.
-export const VERSION = 'v1.9.0';
+export const VERSION = 'v2.0';

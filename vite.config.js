@@ -18,6 +18,7 @@ export default defineConfig({
         moveset:   resolve(__dirname, 'moveset.html'),
         hub:         resolve(__dirname, 'hub.html'),
         teambuilder: resolve(__dirname, 'teambuilder.html'),
+        ohko:        resolve(__dirname, 'ohko.html'),
       },
     },
   },
