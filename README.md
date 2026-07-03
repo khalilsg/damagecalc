@@ -7,6 +7,8 @@ A collection of web tools and a CLI for competitive Pokémon doubles analysis, b
 
 All tools use `@smogon/calc` for damage calculations. Champions-format EVs (0–32) are scaled to standard equivalents before passing to the calc engine — 32 Champions EVs produce the same stat as 252 standard EVs.
 
+For architecture and implementation details, see the [design doc](docs/DESIGN.md).
+
 ---
 
 ## Tools
@@ -37,7 +39,14 @@ All tools use `@smogon/calc` for damage calculations. Champions-format EVs (0–
 | **My Defense: Expanded** | Full ±6 stage grid for incoming moves. Live-tracked moves also show their full stage grid. |
 | **Matchup Lookup** | Select any pair (your Pokémon vs. one opponent) to instantly see offense + defense calcs at current live stages. |
 | **Speed Ladder** | Visualizes your team vs. opponent speeds across min/max/scarf/tailwind scenarios. Reflects live Spe stage changes. |
-| **Summary** | Key threats and opportunities grouped by Pokémon pair, with calc details indented beneath each pair. |
+| **Summary** | Alert flags, opponent sets & threats, then key threats and opportunities grouped by Pokémon pair. |
+| **Lead Selector** | Scores all 15 lead pairs from your team against the opponent's six, using chaos usage data (see `docs/lead-selector.md`). |
+
+When Battle Tracker stat stages are active, My Offense and My Defense switch to live-stage results while keeping the same two archetype bars per move (Max/Min), read from precomputed ±6 stage grids.
+
+### Summary Flags
+
+The top of the Summary tab warns about notable opponent **Abilities** (e.g. Levitate, Defiant, Competitive, Unaware, Contrary) and **Moves** (e.g. Fake Out, Trick Room, Tailwind, Encore). Ability flags come from the full PS Pokédex ability list; move flags come from chaos usage data. Edit the `ALERT_MOVES` / `ALERT_ABILITIES` sets at the top of `src/ui/summary.js` to change the lists.
 
 ### Battle Tracker (Persistent Sidebar)
 
@@ -45,17 +54,26 @@ Real-time state tracking that updates all tabs without re-running the full analy
 
 - **Stat stages:** ±1 adjustors for Atk, SpA, Def, SpD, Spe on every card (±6 range). Global reset per Pokémon.
 - **Helping Hand:** Per-Pokémon toggle (highlights gold). Applies a 1.5× damage boost to that Pokémon's outgoing calcs.
-- **KO / Remove (✕):** Removes a Pokémon from the tracker and strips it from all analysis tabs instantly.
+- **KO / Remove (✕):** Removes a Pokémon from the tracker and strips it from all analysis tabs instantly. Removed Pokémon are still remembered — Save Match records the full rosters from analysis time.
 - **Weather:** Mutually exclusive toggles for Sun, Rain, Sand, Snow. Triggers immediate re-analysis.
 - **Screens:** Reflect and Light Screen for both your side and opponent's side.
 - **Friend Guard:** Separate toggles for your side and the opponent's side. Halves all incoming damage to that side.
 - **Opponent move log:** Type a move name to log it. Immediately calculates damage against your full team and displays it with a LIVE badge in the Defense tabs.
+
+### Team Management
+
+- **Presets** — bundled teams from the `teams/` folder
+- **My Teams** — saved to `localStorage` under `kcalc_teams`, shared with Team Builder (teams saved on either page appear on both)
+- **Save** — prompts with a default name built from the team's Pokémon, alphabetical, joined by ` / `
+- **Share** — copies a link with the team base64-encoded in a `?team=` parameter
+- **Save Match** — post-match modal (from the Battle Tracker) recording outcome, both teams, loss reasons, and a note into Match History
 
 ### Team Format
 
 Standard Pokémon Showdown export with optional tags on the first line:
 
 - **Stat boost tags** — `[+1 SpA]`, `[+2 SpA]`, `[-1 Spe]` etc. Tests each as a separate scenario in My Offense.
+- **Nature line** — both `Bold Nature` and `Nature: Bold` forms are accepted.
 
 ```
 Blastoise-Mega @ Blastoisinite [+2 SpA] [+2 Spe]
@@ -90,6 +108,8 @@ Pre-loaded team presets live in the `teams/` folder as plain `.txt` files.
 | Min Defense | Serious | 0 HP / 0 Def / 0 SpD |
 
 Special moves are tested against Max SpDef + Min Defense. Physical moves are tested against Max Def + Min Defense.
+
+**Non-standard attacking stats:** Body Press scales with the user's Defense; all live-stage views and the OHKO Calc account for this via `getOffensiveStat()` in `src/calcEngine.js` (extend its `MOVE_OFFENSIVE_STAT` map for similar moves).
 
 **Defensive Archetypes** (opponent's possible offensive spreads)
 
@@ -146,9 +166,13 @@ Each slot card includes:
 - **EVs** — 6 inputs (0–32 each), one per stat
 - **Moves** — 4 autocomplete inputs; shows the full Champions-legal moveset on focus without requiring any text
 
+### My Teams
+
+A bar above the slots with a **Load a saved team…** dropdown (presets + saved teams), **SAVE TEAM**, and **DELETE**. Saved teams live in the same `localStorage` store K Calc uses (`kcalc_teams`), so teams saved on either page appear on both. Loading a team clears all slots first, then imports it; saving suggests a default name from the slots' Pokémon (alphabetical, ` / `-delimited).
+
 ### Import from Paste
 
-A collapsible section at the top accepts a Showdown-format paste and pre-fills all 6 slots, including item, ability, nature, EVs, and moves. After import the panel auto-closes.
+A collapsible section at the top accepts a Showdown-format paste and pre-fills all 6 slots, including item, ability, nature, EVs, and moves. All slots are cleared first, and the panel auto-closes on success.
 
 ### Export
 
@@ -284,6 +308,7 @@ Given your Pokémon's species, item, and move, plus a list of opponents, finds t
 - Achievable thresholds show the cheapest nature + Champions EV investment that reaches them
 - Thresholds above the species' maximum stat are flagged **impossible**; immunities are flagged **no damage**
 - Configurable ability, stat-stage boosts (yours and the opponent's), weather, terrain, Helping Hand, and opponent-side Reflect / Light Screen / Friend Guard
+- **Add Top 50** fills the opponent list with the 50 most-used Pokémon from the bundled chaos data (default format); **Clear** empties it
 - Assumes level 50 and full HP
 
 ---
@@ -305,16 +330,29 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. All pages (K Calc, Team Builder, Compare, PokéFinder, Match History) are served from the same dev server.
+Open http://localhost:5173/damagecalc/. All pages (K Calc, Team Builder, Compare, PokéFinder, OHKO Calc, Match History) are served from the same dev server.
 
-To deploy to GitHub Pages:
+### Deployment
+
+Deployment is automatic: pushing to `main` triggers the **Deploy to GitHub Pages** workflow (`.github/workflows/deploy.yml`), which installs dependencies, runs `npm run build`, and publishes `dist/` to Pages. No manual build or `dist/` commit is needed.
+
+### Tests
 
 ```
-npm run build
-git add dist/
-git commit -m "build"
-git push origin main
+node --test tests/*.test.js
 ```
+
+Covers Champions EV scaling, terrain modifiers, and the lead selector.
+
+### Versioning
+
+`src/version.js` holds the version shown in the nav bar and is bumped on every push that changes the app:
+
+- Same-day follow-up pushes → increment the third number (2.0 → 2.0.1)
+- First push of the day, minor change → increment the second number (2.0 → 2.1)
+- New pages / major features → increment the first number (1.x → 2.0)
+
+Docs-only and CI-only changes don't bump the version.
 
 ### Updating Smogon Chaos Data
 
@@ -338,13 +376,12 @@ Default prefixes updated when no `--prefix` is given:
 | VGC 2026 Reg MA | `gen9championsvgc2026regma` |
 | BSS Reg MA | `gen9championsbssregma` |
 
-After running, commit the updated files and redeploy:
+After running, commit the updated files and push — the deploy workflow rebuilds and publishes automatically:
 
 ```bash
 git add public/data/chaos/
 git commit -m "Update Smogon chaos data for YYYY-MM"
-npm run build
-git add dist/
-git commit -m "build"
 git push origin main
 ```
+
+If a new format prefix is added, also add it to `KNOWN_FORMATS` in `src/leadSelector/chaos.js` (the first entry is the site-wide default) and to `DEFAULT_PREFIXES` in `scripts/update-chaos.js`.
