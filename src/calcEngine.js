@@ -539,19 +539,27 @@ const OHKO_STAT_MIN = 21;   // base 1 at level 50, neutral, 31 IV, 0 EV
 const OHKO_STAT_MAX = 999;
 
 /**
- * For a given attacker (species + item + move), find the minimum raw
- * attacking-stat value that guarantees an OHKO (min roll ≥ 100%) on each
- * opponent, against both the matching defensive archetype and Min Defense.
+ * For a given attacker (species + item + move + optional ability), find the
+ * minimum raw attacking-stat value that guarantees an OHKO (min roll ≥ 100%)
+ * on each opponent, against both the matching defensive archetype and Min
+ * Defense.
  *
  * Probes arbitrary stat values by overriding the attacker's base stat so the
  * level-50 neutral 0-EV raw stat lands exactly on the probed value.
  *
- * @param {{ name: string, item?: string, move: string }} attacker
+ * @param {{ name: string, item?: string, move: string, ability?: string }} attacker
  * @param {string[]} opponentNames
+ * @param {{
+ *   myBoost?: number,        // attacker's attacking-stat stage (−6…+6)
+ *   oppBoost?: number,       // opponent's matching defensive-stat stage (−6…+6)
+ *   weather?: string|null, terrain?: string|null,
+ *   helpingHand?: boolean,
+ *   oppReflect?: boolean, oppLightScreen?: boolean, oppFriendGuard?: boolean,
+ * }} options
  * @returns {{
  *   playerName, move, category, statKey, minStat, maxStat,
  *   results: [{ opponentName, rows: [{
- *     archetype, nature, evLabel,
+ *     archetype, nature,
  *     needed: number|null,   // min raw stat for guaranteed OHKO (null = never)
  *     noDamage: boolean,     // move deals no damage (immunity)
  *     possible: boolean,     // needed ≤ species max
@@ -559,20 +567,36 @@ const OHKO_STAT_MAX = 999;
  *   }] }]
  * }}
  */
-export function computeOhkoThresholds(attacker, opponentNames) {
+export function computeOhkoThresholds(attacker, opponentNames, options = {}) {
+  const {
+    myBoost = 0, oppBoost = 0,
+    weather = null, terrain = null,
+    helpingHand = false,
+    oppReflect = false, oppLightScreen = false, oppFriendGuard = false,
+  } = options;
+
   const playerName = resolveSpeciesName(attacker.name);
   const moveName   = attacker.move;
   const cat        = getMoveCategory(moveName);
   if (cat === 'status') throw new Error(`${moveName} is a status move — it can't OHKO.`);
 
-  const statKey   = getOffensiveStat(moveName, cat);
-  const field     = buildField(null, {}, {});
+  const statKey = getOffensiveStat(moveName, cat);
+  const defStat = cat === 'special' ? 'spd' : 'def';
+  const field   = buildField(
+    weather,
+    { reflect: oppReflect, lightScreen: oppLightScreen, friendGuard: oppFriendGuard },
+    { isHelpingHand: helpingHand },
+    terrain
+  );
   const item      = resolveItem(attacker.item);
   const baseStats = gen.species.get(toSpeciesId(playerName)).baseStats;
+  const clampBoost = n => Math.max(-6, Math.min(6, n ?? 0));
 
   // Attacker with its attacking stat forced to an exact raw value.
   const probe = raw => new Pokemon(gen, playerName, {
     level: 50, nature: 'Serious', item,
+    ...(attacker.ability ? { ability: attacker.ability } : {}),
+    ...(myBoost ? { boosts: { [statKey]: clampBoost(myBoost) } } : {}),
     overrides: { baseStats: { ...baseStats, [statKey]: raw - 20 } },
   });
 
@@ -615,10 +639,12 @@ export function computeOhkoThresholds(attacker, opponentNames) {
     ? [DEFENSE_ARCHETYPES[0], MIN_DEFENSE]   // Max SpDef + Min Defense
     : [DEFENSE_ARCHETYPES[1], MIN_DEFENSE];  // Max Def + Min Defense
 
+  const oppBoosts = oppBoost ? { [defStat]: clampBoost(oppBoost) } : {};
+
   const results = opponentNames.map(oppName => {
     const resolvedOpp = resolveSpeciesName(oppName);
     const rows = archetypes.map(arch => {
-      const { needed, noDamage } = threshold(makeArchetypeOpponent(resolvedOpp, arch));
+      const { needed, noDamage } = threshold(makeArchetypeOpponent(resolvedOpp, arch, oppBoosts));
       const possible = needed !== null && needed <= maxStat;
       return {
         archetype: arch.label,

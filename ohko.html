@@ -68,6 +68,25 @@
     .ok-input:focus    { border-color: #555; }
     .ok-input:disabled { background: #f8f8f8; color: #bbb; cursor: not-allowed; }
 
+    select.ok-input { cursor: pointer; appearance: auto; }
+
+    /* ── Field-condition toggles ── */
+    .ok-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .ok-toggle {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      color: #555;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ok-toggle:hover  { background: #f0f0f0; }
+    .ok-toggle.active { background: #111; color: #fff; border-color: #111; }
+
     .ok-dropdown {
       position: absolute;
       top: 100%;
@@ -221,6 +240,55 @@
         <div class="ok-input-wrap">
           <input id="ok-move-input" class="ok-input" placeholder="— pick a Pokémon first —" autocomplete="off" disabled />
           <div id="ok-move-dd" class="ok-dropdown"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ok-row">
+      <div class="ok-field">
+        <div class="ok-label">Ability</div>
+        <select id="ok-ability-select" class="ok-input" disabled>
+          <option value="">— pick a Pokémon —</option>
+        </select>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">My Offense Boost</div>
+        <select id="ok-myboost-select" class="ok-input"></select>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">Opp. Defense Boost</div>
+        <select id="ok-oppboost-select" class="ok-input"></select>
+      </div>
+    </div>
+
+    <div class="ok-row">
+      <div class="ok-field">
+        <div class="ok-label">Weather</div>
+        <select id="ok-weather-select" class="ok-input">
+          <option value="">None</option>
+          <option>Sun</option>
+          <option>Rain</option>
+          <option>Sand</option>
+          <option>Snow</option>
+        </select>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">Terrain</div>
+        <select id="ok-terrain-select" class="ok-input">
+          <option value="">None</option>
+          <option>Electric</option>
+          <option>Grassy</option>
+          <option>Misty</option>
+          <option>Psychic</option>
+        </select>
+      </div>
+      <div class="ok-field" style="flex: 2">
+        <div class="ok-label">Modifiers</div>
+        <div class="ok-toggles">
+          <button type="button" class="ok-toggle" id="ok-hh-btn">Helping Hand</button>
+          <button type="button" class="ok-toggle" id="ok-reflect-btn">Opp. Reflect</button>
+          <button type="button" class="ok-toggle" id="ok-lightscreen-btn">Opp. Light Screen</button>
+          <button type="button" class="ok-toggle" id="ok-fg-btn">Opp. Friend Guard</button>
         </div>
       </div>
     </div>

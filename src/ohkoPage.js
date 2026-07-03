@@ -1,6 +1,6 @@
 import './siteHeader.js';
 import { gen, computeOhkoThresholds } from './calcEngine.js';
-import { getChampionsSpeciesIds, getChampionsMoves, getChampionsMegaForms } from './learnsets.js';
+import { getChampionsSpeciesIds, getChampionsMoves, getChampionsMegaForms, getAbilitiesBatch } from './learnsets.js';
 
 const STAT_LABELS = { atk: 'Atk', spa: 'SpA', def: 'Def' };
 
@@ -100,6 +100,32 @@ const chipsEl    = document.getElementById('ok-opp-chips');
 const calcBtn    = document.getElementById('ok-calc-btn');
 const errorEl    = document.getElementById('ok-error');
 
+const abilitySelect  = document.getElementById('ok-ability-select');
+const myBoostSelect  = document.getElementById('ok-myboost-select');
+const oppBoostSelect = document.getElementById('ok-oppboost-select');
+const weatherSelect  = document.getElementById('ok-weather-select');
+const terrainSelect  = document.getElementById('ok-terrain-select');
+
+const TOGGLES = {
+  helpingHand:    document.getElementById('ok-hh-btn'),
+  oppReflect:     document.getElementById('ok-reflect-btn'),
+  oppLightScreen: document.getElementById('ok-lightscreen-btn'),
+  oppFriendGuard: document.getElementById('ok-fg-btn'),
+};
+for (const btn of Object.values(TOGGLES)) {
+  btn.addEventListener('click', () => btn.classList.toggle('active'));
+}
+
+// Boost stage options: +6 … −6, default 0
+for (const sel of [myBoostSelect, oppBoostSelect]) {
+  for (let s = 6; s >= -6; s--) {
+    const o = el('option', null, s > 0 ? `+${s}` : String(s));
+    o.value = s;
+    if (s === 0) o.selected = true;
+    sel.append(o);
+  }
+}
+
 function updateBtn() {
   calcBtn.disabled = !(selectedMon && moveInput.value.trim() && opponents.length > 0);
 }
@@ -117,14 +143,38 @@ initAC({
     moveInput.disabled = true;
     moveInput.placeholder = 'Loading moves…';
     legalMoves = [];
+    abilitySelect.innerHTML = '';
+    abilitySelect.append(el('option', null, 'Loading…'));
+    abilitySelect.disabled = true;
     updateBtn();
     try {
-      const moveIds = await getChampionsMoves(name);
+      const spId = (allChampSpecies ?? []).find(sp => sp.name === name)?.id;
+      const [moveIds, abilityMap] = await Promise.all([
+        getChampionsMoves(name),
+        getAbilitiesBatch([spId]),
+      ]);
       legalMoves = moveIds.map(id => gen.moves.get(id)?.name).filter(Boolean).sort();
       moveInput.disabled = false;
       moveInput.placeholder = 'Search move…';
+
+      const abilities = abilityMap.get(spId) ?? [];
+      abilitySelect.innerHTML = '';
+      if (abilities.length === 0) {
+        const ph = el('option', null, '— default —');
+        ph.value = '';
+        abilitySelect.append(ph);
+      } else {
+        for (const ab of abilities) {
+          const o = el('option', null, ab);
+          o.value = ab;
+          abilitySelect.append(o);
+        }
+      }
+      abilitySelect.disabled = false;
     } catch {
       moveInput.placeholder = 'Failed to load moves';
+      abilitySelect.innerHTML = '';
+      abilitySelect.append(el('option', null, '— default —'));
     }
   },
 });
@@ -217,7 +267,26 @@ function buildCell(row, data) {
   return td;
 }
 
-function renderResults(data) {
+function conditionsNote(data, options) {
+  const statLabel = STAT_LABELS[data.statKey];
+  const defLabel  = data.category === 'special' ? 'SpD' : 'Def';
+  const fmtStage  = n => (n > 0 ? `+${n}` : String(n));
+
+  const bits = ['Lv 50', 'full HP'];
+  const ability = abilitySelect.value;
+  if (ability) bits.push(`Ability: ${ability}`);
+  if (options.myBoost)  bits.push(`${fmtStage(options.myBoost)} ${statLabel} boost`);
+  if (options.oppBoost) bits.push(`Opp ${fmtStage(options.oppBoost)} ${defLabel} boost`);
+  if (options.weather)  bits.push(options.weather);
+  if (options.terrain)  bits.push(`${options.terrain} Terrain`);
+  if (options.helpingHand)    bits.push('Helping Hand');
+  if (options.oppReflect)     bits.push('Opp Reflect');
+  if (options.oppLightScreen) bits.push('Opp Light Screen');
+  if (options.oppFriendGuard) bits.push('Opp Friend Guard');
+  return `${bits.join(' · ')}. EVs shown on the Champions 0–32 scale.`;
+}
+
+function renderResults(data, options) {
   const statLabel = STAT_LABELS[data.statKey];
 
   // Summary bar
@@ -232,7 +301,7 @@ function renderResults(data) {
   rangeBit.append(el('b', null, data.playerName));
   rangeBit.append(document.createTextNode(` ${statLabel} range at Lv 50: ${data.minStat}–${data.maxStat}`));
   summary.append(rangeBit);
-  summary.append(el('div', 'ok-note', 'Assumes default ability, level 50, full HP, no boosts, neutral field. EVs shown on the Champions 0–32 scale.'));
+  summary.append(el('div', 'ok-note', conditionsNote(data, options)));
 
   // Table header
   const theadRow = document.getElementById('ok-thead-row');
@@ -267,14 +336,27 @@ calcBtn.addEventListener('click', () => {
   calcBtn.disabled = true;
   calcBtn.textContent = 'CALCULATING…';
 
-  // Yield a frame so the button state paints before the synchronous calc burst.
-  requestAnimationFrame(() => setTimeout(() => {
+  const options = {
+    myBoost:        parseInt(myBoostSelect.value)  || 0,
+    oppBoost:       parseInt(oppBoostSelect.value) || 0,
+    weather:        weatherSelect.value || null,
+    terrain:        terrainSelect.value || null,
+    helpingHand:    TOGGLES.helpingHand.classList.contains('active'),
+    oppReflect:     TOGGLES.oppReflect.classList.contains('active'),
+    oppLightScreen: TOGGLES.oppLightScreen.classList.contains('active'),
+    oppFriendGuard: TOGGLES.oppFriendGuard.classList.contains('active'),
+  };
+
+  // Yield so the button state paints before the synchronous calc burst.
+  // (Plain setTimeout, not rAF — rAF never fires in hidden/background tabs.)
+  setTimeout(() => {
     try {
       const data = computeOhkoThresholds(
-        { name: selectedMon, item: itemInput.value.trim(), move },
-        opponents
+        { name: selectedMon, item: itemInput.value.trim(), move, ability: abilitySelect.value || undefined },
+        opponents,
+        options
       );
-      renderResults(data);
+      renderResults(data, options);
     } catch (e) {
       errorEl.textContent = e.message;
       document.getElementById('ok-results').style.display = 'none';
@@ -282,7 +364,7 @@ calcBtn.addEventListener('click', () => {
       calcBtn.textContent = 'Calculate';
       updateBtn();
     }
-  }, 0));
+  }, 20);
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

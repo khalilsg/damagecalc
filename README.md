@@ -283,7 +283,8 @@ Given your Pokémon's species, item, and move, plus a list of opponents, finds t
 - Each opponent is checked against two spreads: the matching defensive archetype (Bold 32 HP/32 Def or Calm 32 HP/32 SpD) and neutral (Serious, 0 EVs)
 - Achievable thresholds show the cheapest nature + Champions EV investment that reaches them
 - Thresholds above the species' maximum stat are flagged **impossible**; immunities are flagged **no damage**
-- Assumes level 50, default ability, full HP, no boosts, neutral field
+- Configurable ability, stat-stage boosts (yours and the opponent's), weather, terrain, Helping Hand, and opponent-side Reflect / Light Screen / Friend Guard
+- Assumes level 50 and full HP
 
 ---
 
