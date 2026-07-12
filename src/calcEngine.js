@@ -90,6 +90,20 @@ export function resolveSpeciesName(name) {
 
 export const allSpecies = [...gen.species].filter(s => !s.nfe).map(s => s.name).sort();
 
+export const allItems = [...gen.items].map(i => i.name).filter(Boolean).sort();
+
+// Mega form display name → required Mega Stone item name.
+// Built from each stone's `megaStone: { baseSpecies: megaForm }` map.
+// (Mega Rayquaza has no stone and isn't included.)
+export const megaStoneFor = (() => {
+  const map = {};
+  for (const item of gen.items) {
+    if (!item.megaStone) continue;
+    for (const form of Object.values(item.megaStone)) map[form] = item.name;
+  }
+  return map;
+})();
+
 // --- Common moves lookup (live stats → bundled fallback) ---
 
 async function getCommonOffensiveMoves(speciesName) {

@@ -1,5 +1,6 @@
 import './siteHeader.js';
-import { gen } from './calcEngine.js';
+import { gen, allItems, megaStoneFor } from './calcEngine.js';
+import { getChampionsLegalItems } from './championsItems.js';
 import { getChampionsSpeciesIds, getChampionsMoves, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
 import { parseSets } from './parser.js';
 import { TEAMS } from './teams.js';
@@ -35,6 +36,11 @@ const STAT_LABELS = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', 
 // ── Species list ──────────────────────────────────────────────────────────────
 
 let allChampSpecies = null;
+
+// Champions-legal item names (async); `allowAllItems` bypasses the filter.
+let champLegalItems = null;
+let allowAllItems = false;
+getChampionsLegalItems().then(list => { champLegalItems = list; });
 
 async function ensureSpeciesList() {
   if (allChampSpecies) return allChampSpecies;
@@ -171,12 +177,20 @@ function createSlotEl(i) {
   // ── Item + Ability
   const row1 = el('div', 'tb-two-col');
 
+  // Mega Stone we last auto-filled, so we can replace/clear it on a species
+  // change without clobbering an item the user typed or picked themselves.
+  let autoFilledItem = '';
+
   const itemField = el('div', 'tb-field');
   itemField.append(el('label', 'tb-label', 'Item'));
+  const itemWrap = el('div', 'tb-input-wrap');
   const itemInput = el('input', 'tb-input');
   itemInput.placeholder = 'e.g. Leftovers';
-  itemInput.addEventListener('input', () => { s.item = itemInput.value.trim(); });
-  itemField.append(itemInput);
+  itemInput.autocomplete = 'off';
+  itemInput.addEventListener('input', () => { s.item = itemInput.value.trim(); autoFilledItem = ''; });
+  const itemDd = el('div', 'tb-dropdown');
+  itemWrap.append(itemInput, itemDd);
+  itemField.append(itemWrap);
 
   const abilityField = el('div', 'tb-field');
   abilityField.append(el('label', 'tb-label', 'Ability'));
@@ -286,6 +300,15 @@ function createSlotEl(i) {
     nameInput.value = name;
     for (const inp of moveInputs) { inp.value = ''; inp.disabled = true; }
 
+    // Auto-fill the required Mega Stone for mega forms. Only replace the item
+    // if it's empty or a stone we previously auto-filled — never a user's own.
+    const megaStone = megaStoneFor[name] ?? '';
+    if (megaStone) {
+      s.item = megaStone; itemInput.value = megaStone; autoFilledItem = megaStone;
+    } else if (itemInput.value === autoFilledItem) {
+      s.item = ''; itemInput.value = ''; autoFilledItem = '';
+    }
+
     abilitySelect.innerHTML = '';
     abilitySelect.append(el('option', null, 'Loading…'));
     abilitySelect.disabled = true;
@@ -315,7 +338,7 @@ function createSlotEl(i) {
     for (const inp of moveInputs) inp.disabled = false;
 
     // Apply overrides (from paste import)
-    if (overrides.item !== undefined)  { s.item = overrides.item; itemInput.value = overrides.item; }
+    if (overrides.item) { s.item = overrides.item; itemInput.value = overrides.item; autoFilledItem = ''; }
     if (overrides.ability && abilities.includes(overrides.ability)) {
       s.ability = overrides.ability;
       abilitySelect.value = overrides.ability;
@@ -346,6 +369,15 @@ function createSlotEl(i) {
     onPick: name => applySpecies(name),
   });
 
+  // ── Wire Item autocomplete
+  initAC({
+    input: itemInput,
+    dropdown: itemDd,
+    getNames: () => allowAllItems ? allItems : (champLegalItems ?? allItems),
+    openOnFocus: false,
+    onPick: name => { s.item = name; itemInput.value = name; autoFilledItem = ''; },
+  });
+
   // ── Clear
   function clearSlot() {
     Object.assign(s, {
@@ -356,6 +388,7 @@ function createSlotEl(i) {
     });
     nameInput.value = '';
     itemInput.value = '';
+    autoFilledItem = '';
     abilitySelect.innerHTML = '';
     const ph = el('option', null, '— pick a Pokémon —');
     ph.value = '';
@@ -379,6 +412,10 @@ const grid = document.getElementById('tb-grid');
 for (let i = 0; i < 6; i++) grid.append(createSlotEl(i));
 
 ensureSpeciesList(); // pre-fetch so autocomplete is instant
+
+document.getElementById('tb-allow-all-items')?.addEventListener('change', e => {
+  allowAllItems = e.target.checked;
+});
 
 // ── Paste generation ──────────────────────────────────────────────────────────
 

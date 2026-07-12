@@ -41,6 +41,20 @@
       #tb-grid { grid-template-columns: 1fr; }
     }
 
+    .tb-allow-all {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      max-width: 940px;
+      margin: 0 0 8px;
+      font-size: 0.72rem;
+      color: #aaa;
+      cursor: pointer;
+      user-select: none;
+    }
+    .tb-allow-all input { margin: 0; cursor: pointer; }
+    .tb-allow-all:hover { color: #777; }
+
     /* ── Slot card ── */
     .tb-slot {
       background: #fff;
@@ -444,6 +458,11 @@
       </div>
     </div>
   </details>
+
+  <label class="tb-allow-all" title="Show every item, including ones not legal in the Champions format">
+    <input type="checkbox" id="tb-allow-all-items" />
+    Allow non-Champions items
+  </label>
 
   <div id="tb-grid"></div>
 

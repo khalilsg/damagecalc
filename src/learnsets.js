@@ -94,6 +94,52 @@ export async function getChampionsMovesBatch(names) {
   return result;
 }
 
+// ── Champions item legality overrides ─────────────────────────────────────────
+// The Champions mod's items.ts is a *diff* over base Gen 9, not a whitelist:
+//   isNonstandard: "Past"  → banned in Champions
+//   isNonstandard: null    → re-enabled (mostly Mega Stones, Past in base Gen 9)
+// Anything not listed inherits base legality. Unlike learnsets.ts, this file
+// contains TypeScript in method bodies (e.g. `as any`), so it can't be eval'd —
+// we scan for the isNonstandard flag per top-level entry instead. Top-level
+// entries are indented with a single tab; function-body lines use 2+ tabs.
+
+let _champItems = null;
+let _champItemsPromise = null;
+
+const CHAMPIONS_ITEMS_URL =
+  'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data/mods/champions/items.ts';
+
+/**
+ * Champions item legality overrides.
+ * @returns {Promise<{ banned: Set<string>, reenabled: Set<string> }>}  PS item IDs
+ */
+export async function getChampionsItemOverrides() {
+  if (_champItems) return _champItems;
+  if (_champItemsPromise) return _champItemsPromise;
+
+  _champItemsPromise = (async () => {
+    const res = await fetch(CHAMPIONS_ITEMS_URL);
+    if (!res.ok) throw new Error('Failed to fetch Champions items from GitHub');
+    const text = await res.text();
+
+    const banned = new Set();
+    const reenabled = new Set();
+    const re = /^\t(\w+):\s*\{/gm; // top-level entry starts only
+    const marks = [];
+    let m;
+    while ((m = re.exec(text))) marks.push({ id: m[1], idx: m.index });
+    for (let i = 0; i < marks.length; i++) {
+      const slice = text.slice(marks[i].idx, marks[i + 1]?.idx ?? text.length);
+      if (/isNonstandard:\s*null/.test(slice)) reenabled.add(marks[i].id);
+      else if (/isNonstandard:\s*['"]Past['"]/.test(slice)) banned.add(marks[i].id);
+    }
+    _champItems = { banned, reenabled };
+    return _champItems;
+  })();
+
+  return _champItemsPromise;
+}
+
 // ── PS Pokédex (ability data) ─────────────────────────────────────────────────
 // gen.species.abilities from @smogon/calc is incomplete (many Pokémon only
 // show slot-0). Use the PS Pokédex which has all three ability slots.

@@ -10,7 +10,9 @@ import './siteHeader.js';
 import { runOffensiveCheck, runDefensiveCheck, runSpeedAudit } from '../pokebench/simulate.js';
 import { resolveSpecies, isMoveUsable } from '../pokebench/calc.js';
 import { loadChaosData, KNOWN_FORMATS } from './leadSelector/chaos.js';
-import { allSpecies } from './calcEngine.js';
+import { allSpecies, allItems } from './calcEngine.js';
+import { getChampionsLegalItems } from './championsItems.js';
+import { megaStoneFor } from './calcEngine.js';
 import { parseSets } from './parser.js';
 
 // ── Browser-safe chaos parsers (no process.stderr) ──────────────────────────
@@ -245,13 +247,14 @@ function renderSpeed(results, container) {
 
 // ── Species autocomplete ─────────────────────────────────────────────────────
 
-function initMonSearch() {
-  const input    = document.getElementById('mon-search');
-  const dropdown = document.getElementById('mon-dropdown');
+function initSearch(inputId, dropdownId, getSource, onPick) {
+  const input    = document.getElementById(inputId);
+  const dropdown = document.getElementById(dropdownId);
+  if (!input || !dropdown) return;
   let items = [], activeIdx = -1;
 
   function getMatches(q) {
-    return allSpecies.filter(n => n.toLowerCase().includes(q.toLowerCase())).slice(0, 40);
+    return (getSource() ?? []).filter(n => n.toLowerCase().includes(q.toLowerCase())).slice(0, 40);
   }
 
   function render(q) {
@@ -274,6 +277,7 @@ function initMonSearch() {
     dropdown.classList.remove('open');
     items = [];
     activeIdx = -1;
+    onPick?.(name);
   }
 
   function setActive(idx) {
@@ -299,7 +303,14 @@ function initMonSearch() {
 function applyParsedSet(set) {
   if (set.name)   document.getElementById('mon-search').value    = set.name;
   if (set.nature) document.getElementById('nature-select').value = set.nature;
-  document.getElementById('item-input').value = set.item ?? '';
+  if (set.item) {
+    document.getElementById('item-input').value = set.item;
+    autoFilledItem = '';
+  } else {
+    document.getElementById('item-input').value = '';
+    autoFilledItem = '';
+    if (set.name) autofillMegaItem(set.name); // fill the stone for megas
+  }
   if (set.evs) {
     document.getElementById('ev-hp').value  = set.evs.hp  ?? 0;
     document.getElementById('ev-atk').value = set.evs.atk ?? 0;
@@ -614,8 +625,29 @@ function initTeamMode() {
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
+// Champions-legal item names (async); `allowAllItems` bypasses the filter.
+let champLegalItems = null;
+let allowAllItems = false;
+getChampionsLegalItems().then(list => { champLegalItems = list; });
+
+// Mega Stone we last auto-filled, so we only replace/clear it (never a user's
+// own item) when the selected Pokémon changes.
+let autoFilledItem = '';
+function autofillMegaItem(monName) {
+  const itemInput = document.getElementById('item-input');
+  const megaStone = megaStoneFor[monName] ?? '';
+  if (megaStone) { itemInput.value = megaStone; autoFilledItem = megaStone; }
+  else if (itemInput.value === autoFilledItem) { itemInput.value = ''; autoFilledItem = ''; }
+}
+document.getElementById('item-input')?.addEventListener('input', () => { autoFilledItem = ''; });
+
 initFormats();
-initMonSearch();
+initSearch('mon-search', 'mon-dropdown', () => allSpecies, autofillMegaItem);
+initSearch('item-input', 'item-dropdown',
+  () => allowAllItems ? allItems : (champLegalItems ?? allItems));
+document.getElementById('allow-all-items')?.addEventListener('change', e => {
+  allowAllItems = e.target.checked;
+});
 initPasteImport();
 initTabs();
 initTeamMode();

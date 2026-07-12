@@ -96,7 +96,8 @@
     /* Mon autocomplete */
     .pb-mon-wrap { position: relative; }
 
-    #mon-dropdown {
+    #mon-dropdown,
+    #item-dropdown {
       position: absolute;
       top: 100%;
       left: 0;
@@ -110,7 +111,8 @@
       z-index: 100;
       display: none;
     }
-    #mon-dropdown.open { display: block; }
+    #mon-dropdown.open,
+    #item-dropdown.open { display: block; }
 
     .pb-dropdown-item {
       padding: 6px 10px;
@@ -119,6 +121,22 @@
     }
     .pb-dropdown-item:hover,
     .pb-dropdown-active { background: #f0f0f0; }
+
+    .pb-allow-all {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: 0.68rem;
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+      color: #bbb;
+      cursor: pointer;
+      user-select: none;
+    }
+    .pb-allow-all input { margin: 0; cursor: pointer; }
+    .pb-allow-all:hover { color: #888; }
 
     /* EVs */
     .pb-ev-row {
@@ -585,7 +603,13 @@
         </div>
         <div class="pb-field field-item">
           <label>Item <span style="font-weight:400;text-transform:none;color:#aaa">(optional)</span></label>
-          <input id="item-input" placeholder="e.g. Life Orb" />
+          <div class="pb-mon-wrap">
+            <input id="item-input" placeholder="e.g. Life Orb" autocomplete="off" />
+            <div id="item-dropdown"></div>
+          </div>
+          <label class="pb-allow-all" title="Show every item, including ones not legal in the Champions format">
+            <input type="checkbox" id="allow-all-items" /> Allow non-Champions items
+          </label>
         </div>
         <div class="pb-field field-fmt">
           <label>Format</label>
