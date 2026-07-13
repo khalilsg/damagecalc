@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OHKO Calc — K Calc</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #f4f4f2;
+      color: #1a1a1a;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px;
+      padding: 24px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .page-header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 2px; }
+    .page-sub  { font-size: 0.78rem; color: #888; margin-top: 4px; }
+    .back-link { font-size: 0.78rem; color: #888; text-decoration: none; }
+    .back-link:hover { color: #333; }
+
+    /* ── Form ── */
+    .ok-form {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+
+    .ok-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+      margin-bottom: 6px;
+    }
+
+    .ok-row   { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+    .ok-field { flex: 1; min-width: 180px; }
+
+    .ok-input-wrap { position: relative; }
+
+    .ok-input {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      background: #fff;
+      color: #1a1a1a;
+      outline: none;
+    }
+    .ok-input:focus    { border-color: #555; }
+    .ok-input:disabled { background: #f8f8f8; color: #bbb; cursor: not-allowed; }
+
+    select.ok-input { cursor: pointer; appearance: auto; }
+
+    /* ── Field-condition toggles ── */
+    .ok-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .ok-toggle {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      color: #555;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ok-toggle:hover  { background: #f0f0f0; }
+    .ok-toggle.active { background: #111; color: #fff; border-color: #111; }
+
+    .ok-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0; right: 0;
+      background: #fff;
+      border: 1px solid #ccc;
+      border-top: none;
+      border-radius: 0 0 5px 5px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 100;
+      display: none;
+    }
+    .ok-dropdown.open { display: block; }
+    .ok-dd-item { padding: 6px 12px; font-size: 0.85rem; cursor: pointer; }
+    .ok-dd-item:hover, .ok-dd-active { background: #f0f0f0; }
+
+    .ok-divider { border: none; border-top: 1px solid #f0f0f0; margin: 16px 0; }
+
+    /* ── Chips ── */
+    .ok-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .ok-chips:empty { margin-bottom: 0; }
+
+    .ok-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1a1a1a;
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px 4px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .ok-chip-remove {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.65);
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+    }
+    .ok-chip-remove:hover { color: #fff; }
+
+    /* ── Button / error ── */
+    .ok-btn {
+      background: #111;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 10px 28px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .ok-btn:hover    { background: #333; }
+    .ok-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .ok-btn-secondary {
+      background: #fff;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+    .ok-btn-secondary:hover { background: #f0f0f0; }
+
+    .ok-error { color: #c0392b; font-size: 0.82rem; margin-top: 8px; min-height: 18px; }
+
+    /* ── Results ── */
+    #ok-results { max-width: 900px; display: none; }
+
+    .ok-summary {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      color: #444;
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+    .ok-summary b { color: #1a1a1a; }
+    .ok-note { font-size: 0.72rem; color: #999; width: 100%; }
+
+    .ok-table-wrap {
+      background: #fff;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .ok-table { width: 100%; border-collapse: collapse; }
+
+    .ok-table th {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #888;
+      padding: 9px 14px;
+      text-align: left;
+      border-bottom: 1px solid #e5e5e5;
+      white-space: nowrap;
+    }
+
+    .ok-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    .ok-table tr:last-child td { border-bottom: none; }
+
+    .ok-td-name { font-weight: 600; white-space: nowrap; }
+
+    .ok-needed { font-size: 1.05rem; font-weight: 700; }
+    .ok-needed.ok-yes  { color: #2a7a2a; }
+    .ok-needed.ok-no   { color: #c00; }
+    .ok-needed.ok-none { color: #999; }
+
+    .ok-hint { font-size: 0.72rem; color: #888; margin-top: 2px; }
+  </style>
+  <script type="module" crossorigin src="/damagecalc/assets/ohko-DpReIyS5.js"></script>
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/calcEngine-CD1A00WF.js">
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/modulepreload-polyfill-CGdBa_z4.js">
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/chaos-AOIINlnn.js">
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/learnsets-C1SoHTBX.js">
+  <link rel="modulepreload" crossorigin href="/damagecalc/assets/siteHeader-Da56BDTc.js">
+</head>
+<body>
+
+  <div class="page-header">
+    <div>
+      <h1>OHKO CALC</h1>
+      <div class="page-sub">Find the attacking stat you'd need to guarantee an OHKO with a given move.</div>
+    </div>
+    <a class="back-link" href="/damagecalc/hub.html">← All Tools</a>
+  </div>
+
+  <div class="ok-form">
+    <div class="ok-row">
+      <div class="ok-field">
+        <div class="ok-label">My Pokémon</div>
+        <div class="ok-input-wrap">
+          <input id="ok-mon-input" class="ok-input" placeholder="Search Pokémon…" autocomplete="off" />
+          <div id="ok-mon-dd" class="ok-dropdown"></div>
+        </div>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">Item</div>
+        <input id="ok-item-input" class="ok-input" placeholder="e.g. Choice Specs (optional)" autocomplete="off" />
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">Move</div>
+        <div class="ok-input-wrap">
+          <input id="ok-move-input" class="ok-input" placeholder="— pick a Pokémon first —" autocomplete="off" disabled />
+          <div id="ok-move-dd" class="ok-dropdown"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ok-row">
+      <div class="ok-field">
+        <div class="ok-label">Ability</div>
+        <select id="ok-ability-select" class="ok-input" disabled>
+          <option value="">— pick a Pokémon —</option>
+        </select>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">My Offense Boost</div>
+        <select id="ok-myboost-select" class="ok-input"></select>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">Opp. Defense Boost</div>
+        <select id="ok-oppboost-select" class="ok-input"></select>
+      </div>
+    </div>
+
+    <div class="ok-row">
+      <div class="ok-field">
+        <div class="ok-label">Weather</div>
+        <select id="ok-weather-select" class="ok-input">
+          <option value="">None</option>
+          <option>Sun</option>
+          <option>Rain</option>
+          <option>Sand</option>
+          <option>Snow</option>
+        </select>
+      </div>
+      <div class="ok-field">
+        <div class="ok-label">Terrain</div>
+        <select id="ok-terrain-select" class="ok-input">
+          <option value="">None</option>
+          <option>Electric</option>
+          <option>Grassy</option>
+          <option>Misty</option>
+          <option>Psychic</option>
+        </select>
+      </div>
+      <div class="ok-field" style="flex: 2">
+        <div class="ok-label">Modifiers</div>
+        <div class="ok-toggles">
+          <button type="button" class="ok-toggle" id="ok-hh-btn">Helping Hand</button>
+          <button type="button" class="ok-toggle" id="ok-reflect-btn">Opp. Reflect</button>
+          <button type="button" class="ok-toggle" id="ok-lightscreen-btn">Opp. Light Screen</button>
+          <button type="button" class="ok-toggle" id="ok-fg-btn">Opp. Friend Guard</button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ok-divider" />
+
+    <div class="ok-label">Opponents</div>
+    <div class="ok-row">
+      <div class="ok-field ok-input-wrap">
+        <input id="ok-opp-input" class="ok-input" placeholder="Add opponent Pokémon…" autocomplete="off" />
+        <div id="ok-opp-dd" class="ok-dropdown"></div>
+      </div>
+      <button type="button" id="ok-top50-btn" class="ok-btn ok-btn-secondary">Add Top 50</button>
+      <button type="button" id="ok-opp-clear-btn" class="ok-btn ok-btn-secondary">Clear</button>
+    </div>
+    <div id="ok-opp-chips" class="ok-chips"></div>
+
+    <button id="ok-calc-btn" class="ok-btn" disabled>Calculate</button>
+    <div id="ok-error" class="ok-error"></div>
+  </div>
+
+  <div id="ok-results">
+    <div id="ok-summary" class="ok-summary"></div>
+    <div class="ok-table-wrap">
+      <table class="ok-table">
+        <thead><tr id="ok-thead-row"></tr></thead>
+        <tbody id="ok-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</body>
+</html>

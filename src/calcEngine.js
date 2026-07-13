@@ -42,7 +42,38 @@ const DEFENSE_ARCHETYPES = [
 const MIN_DEFENSE = DEFENSE_ARCHETYPES[2];
 const MIN_OFFENSE = OFFENSE_ARCHETYPES[2];
 
-const STAGES = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
+// Cache Move objects by name — Move construction is cheap but happens on every
+// cell compute (twice: getMoveCategory + calcResult), so caching removes it from
+// the hot path.
+const moveCache = new Map();
+function getMove(moveName) {
+  let m = moveCache.get(moveName);
+  if (m === undefined) { m = new Move(gen, moveName); moveCache.set(moveName, m); }
+  return m;
+}
+
+// Lazy stage grid. The expanded views only ever read a single cell — the one at
+// the current attacker/defender stat stages (0,0 until the tracker moves a
+// slider). Precomputing all 13×13 = 169 cells per move × archetype × matchup was
+// the dominant cost of runAnalysis (tens of thousands of wasted `calculate`
+// calls). Instead we hand back a Proxy that computes and caches each cell only
+// when it's actually accessed, keeping the `grid["a,b"]` consumer syntax intact.
+function lazyGrid(computeCell) {
+  const cache = new Map();
+  return new Proxy(Object.create(null), {
+    get(_t, key) {
+      if (typeof key !== 'string') return undefined;
+      if (cache.has(key)) return cache.get(key);
+      const comma = key.indexOf(',');
+      if (comma === -1) return undefined;
+      const a = Number(key.slice(0, comma));
+      const b = Number(key.slice(comma + 1));
+      const v = (Number.isNaN(a) || Number.isNaN(b)) ? undefined : computeCell(a, b);
+      cache.set(key, v);
+      return v;
+    },
+  });
+}
 
 // --- Name resolution ---
 
@@ -193,7 +224,7 @@ function makeArchetypeOpponent(resolvedName, archetype, boostOverrides = {}) {
 // --- Damage calc helpers ---
 
 function getMoveCategory(moveName) {
-  try { return new Move(gen, moveName).category?.toLowerCase() ?? 'physical'; } catch { return 'physical'; }
+  try { return getMove(moveName).category?.toLowerCase() ?? 'physical'; } catch { return 'physical'; }
 }
 
 // Moves whose damage is computed from a non-standard attacking stat.
@@ -306,6 +337,19 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
   const defenseExpanded = [];
   const speed = [];
 
+  // Resolve each opponent and fetch its common moves once — these are identical
+  // across every player, so doing them inside the player loop repeated the same
+  // name-resolution (edit distance) and stats lookups players× over.
+  const oppData = new Map();
+  for (const opponentName of opponentNames) {
+    if (oppData.has(opponentName)) continue;
+    const resolvedOpp = resolveSpeciesName(opponentName);
+    const oppSpecies  = gen.species.get(toSpeciesId(resolvedOpp));
+    if (!oppSpecies) continue;
+    const commonMoves = await getCommonOffensiveMoves(resolvedOpp);
+    oppData.set(opponentName, { resolvedOpp, oppSpecies, commonMoves });
+  }
+
   for (const set of playerSets) {
     const playerName = resolveSpeciesName(set.name);
     const playerSpecies = gen.species.get(toSpeciesId(playerName));
@@ -331,9 +375,9 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
     const playerDefenseExp = [];
 
     for (const opponentName of opponentNames) {
-      const resolvedOpp = resolveSpeciesName(opponentName);
-      const oppSpecies = gen.species.get(toSpeciesId(resolvedOpp));
-      if (!oppSpecies) continue;
+      const entry = oppData.get(opponentName);
+      if (!entry) continue;
+      const { resolvedOpp, oppSpecies } = entry;
 
       // ===================== OFFENSE =====================
       const offMatchup = { opponentName: resolvedOpp, scenarios: [] };
@@ -377,14 +421,11 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
           ? DEFENSE_ARCHETYPES.filter(a => a.label !== 'Max Def')
           : DEFENSE_ARCHETYPES.filter(a => a.label !== 'Max SpDef');
         const grids = archetypes.map(arch => {
-          const grid = {};
-          for (const myStage of STAGES) {
-            for (const oppStage of STAGES) {
-              const attacker = makeAttacker(set, playerName, { [atkStat]: myStage });
-              const defender = makeArchetypeOpponent(resolvedOpp, arch, { [defStat]: oppStage });
-              grid[`${myStage},${oppStage}`] = stripAttackerName(calcResult(attacker, defender, moveName, offenseField), playerName);
-            }
-          }
+          const grid = lazyGrid((myStage, oppStage) => {
+            const attacker = makeAttacker(set, playerName, { [atkStat]: myStage });
+            const defender = makeArchetypeOpponent(resolvedOpp, arch, { [defStat]: oppStage });
+            return stripAttackerName(calcResult(attacker, defender, moveName, offenseField), playerName);
+          });
           return { archetype: arch.label, grid };
         });
         // Keep `grid` = Min Defense grid for back-compat (My Offense Expanded tab).
@@ -395,7 +436,7 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
 
       // ===================== DEFENSE =====================
       const defMatchup = { opponentName: resolvedOpp, scenarios: [] };
-      const commonMoves = await getCommonOffensiveMoves(resolvedOpp);
+      const commonMoves = entry.commonMoves;
 
       for (const moveName of commonMoves) {
         const cat = getMoveCategory(moveName);
@@ -435,14 +476,11 @@ export async function runAnalysis(playerSets, opponentNames, fieldOptions = {}) 
           ? OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max Atk')
           : OFFENSE_ARCHETYPES.filter(a => a.label !== 'Max SpAtk');
         const grids = archetypes.map(arch => {
-          const grid = {};
-          for (const oppStage of STAGES) {
-            for (const myStage of STAGES) {
-              const attacker = makeArchetypeOpponent(resolvedOpp, arch, { [atkStat]: oppStage });
-              const defender = makeAttacker(set, playerName, { [defStat]: myStage });
-              grid[`${oppStage},${myStage}`] = stripDefenderName(calcResult(attacker, defender, moveName, defenseField), playerName);
-            }
-          }
+          const grid = lazyGrid((oppStage, myStage) => {
+            const attacker = makeArchetypeOpponent(resolvedOpp, arch, { [atkStat]: oppStage });
+            const defender = makeAttacker(set, playerName, { [defStat]: myStage });
+            return stripDefenderName(calcResult(attacker, defender, moveName, defenseField), playerName);
+          });
           return { archetype: arch.label, grid };
         });
         // Keep `grid` = Min Offense grid for back-compat (Defense Expanded + Matchup Lookup tabs).
@@ -532,14 +570,11 @@ export function computeDefenseExpGrid(moveName, opponentName, playerSet, fieldOp
     fieldOptions.terrain ?? null
   );
 
-  const grid = {};
-  for (const oppStage of STAGES) {
-    for (const myStage of STAGES) {
-      const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
-      const defender = makeAttacker(playerSet, playerName, { [defStat]: myStage });
-      grid[`${oppStage},${myStage}`] = stripDefenderName(calcResult(attacker, defender, moveName, field), playerName);
-    }
-  }
+  const grid = lazyGrid((oppStage, myStage) => {
+    const attacker = makeArchetypeOpponent(resolvedOpp, MIN_OFFENSE, { [atkStat]: oppStage });
+    const defender = makeAttacker(playerSet, playerName, { [defStat]: myStage });
+    return stripDefenderName(calcResult(attacker, defender, moveName, field), playerName);
+  });
   return { playerName, moveName, category: cat, grid };
 }
 

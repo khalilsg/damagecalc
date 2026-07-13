@@ -33,7 +33,7 @@ async function ensureChampionsSpecies() {
   for (const id of ids) {
     const species = gen.species.get(id);
     if (!species) continue;
-    champSpecies.push({ id, name: species.name, species, abilities: abilityMap.get(id) ?? [] });
+    champSpecies.push({ id, name: species.name, species, abilities: abilityMap.get(id) ?? [], isMega: false });
   }
 
   // Mega forms inherit their learnset from the base species (handled by resolveId
@@ -44,6 +44,7 @@ async function ensureChampionsSpecies() {
       name: mega.name,
       species: { baseStats: mega.baseStats, types: mega.types },
       abilities: mega.abilities,
+      isMega: true,
     });
   }
 
@@ -97,6 +98,8 @@ function serebiiUrl(name) {
 
 let selectedMoves   = [];
 let selectedAbility = null;
+let hideMegas   = false;
+let lastListAll = false;
 let sortKey = 'bst';
 let sortAsc  = false;
 let results  = [];
@@ -231,12 +234,13 @@ function updateBtn() {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 
-async function runSearch({ listAll = false } = {}) {
+async function runSearch({ listAll = false, scroll = true } = {}) {
   const btn     = document.getElementById('find-btn');
   const errorEl = document.getElementById('ml-error');
   errorEl.textContent = '';
 
   if (!listAll && selectedMoves.length === 0 && !selectedAbility) return;
+  lastListAll = listAll;
 
   btn.textContent = 'LOADING…';
   btn.disabled    = true;
@@ -263,7 +267,10 @@ async function runSearch({ listAll = false } = {}) {
   btn.disabled    = false;
 
   results = [];
-  for (const { name, species: s, abilities } of species) {
+  for (const { name, species: s, abilities, isMega } of species) {
+    // Mega filter
+    if (hideMegas && isMega) continue;
+
     // Ability filter (uses PS Pokédex data — includes all three ability slots)
     if (selectedAbility && !abilities.includes(selectedAbility)) continue;
 
@@ -294,7 +301,7 @@ async function runSearch({ listAll = false } = {}) {
   document.getElementById('ml-count').textContent = `${results.length} Pokémon`;
   const wrapEl = document.getElementById('ml-results');
   wrapEl.style.display = 'block';
-  wrapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (scroll) wrapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Sort ──────────────────────────────────────────────────────────────────────
@@ -399,6 +406,13 @@ updateBtn();
 
 document.getElementById('find-btn').addEventListener('click', () => runSearch());
 document.getElementById('list-all-btn').addEventListener('click', () => runSearch({ listAll: true }));
+document.getElementById('hide-megas').addEventListener('change', e => {
+  hideMegas = e.target.checked;
+  // Re-run the last search in place (data is cached) if results are showing
+  if (document.getElementById('ml-results').style.display === 'block') {
+    runSearch({ listAll: lastListAll, scroll: false });
+  }
+});
 document.getElementById('move-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !document.querySelector('#move-dropdown .ml-dd-active')) {
     if (selectedMoves.length > 0 || selectedAbility) runSearch();
