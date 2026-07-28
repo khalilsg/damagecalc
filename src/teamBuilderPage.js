@@ -524,7 +524,7 @@ loadBtn.addEventListener('click', () => {
   const paste = buildFullPaste();
   if (!paste) { showStatus('No Pokémon added yet.', true); return; }
   localStorage.setItem('kcalc_builder_team', paste);
-  window.location.href = '/';
+  window.location.href = '/calc.html';
 });
 
 pokebenchBtn.addEventListener('click', () => {

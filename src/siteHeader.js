@@ -4,7 +4,7 @@ const NAV_HEIGHT = 40;
 
 const PAGES = [
   { label: 'Hub',           href: '/hub.html' },
-  { label: 'K Calc',        href: '/' },
+  { label: 'K Calc',        href: '/calc.html' },
   { label: 'Team Builder',  href: '/teambuilder.html' },
   { label: 'Compare',       href: '/compare.html' },
   { label: 'PokéFinder',    href: '/moveset.html' },
