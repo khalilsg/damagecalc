@@ -210,7 +210,7 @@ Run locally once per month when new Smogon stats drop. Commit the updated files 
 
 ### Fetching in the app
 ```js
-// import.meta.env.BASE_URL resolves to '/' in dev, '/damagecalc/' on GitHub Pages
+// import.meta.env.BASE_URL resolves to '/' in dev, '/' on GitHub Pages
 const res = await fetch(`${import.meta.env.BASE_URL}data/chaos/${prefix}.json`);
 ```
 

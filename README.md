@@ -3,7 +3,7 @@
 
 A collection of web tools and a CLI for competitive Pokémon doubles analysis, built for the **Champions format** (32 EV cap per stat).
 
-**Live app:** https://khalilsg.github.io/damagecalc/
+**Live app:** https://khalilsg.github.io/
 
 All tools use `@smogon/calc` for damage calculations. Champions-format EVs (0–32) are scaled to standard equivalents before passing to the calc engine — 32 Champions EVs produce the same stat as 252 standard EVs.
 
@@ -27,7 +27,7 @@ For architecture and implementation details, see the [design doc](docs/DESIGN.md
 
 ## K Calc (Web App)
 
-**Demo mode** (pre-loaded team, no setup required): https://khalilsg.github.io/damagecalc/demo/
+**Demo mode** (pre-loaded team, no setup required): https://khalilsg.github.io/demo/
 
 ### Analysis Tabs
 
@@ -186,7 +186,7 @@ A collapsible section at the top accepts a Showdown-format paste and pre-fills a
 
 Benchmark a Pokémon against real Smogon metagame usage data. Available as a web app and as a CLI.
 
-**Web app:** https://khalilsg.github.io/damagecalc/pokebench/
+**Web app:** https://khalilsg.github.io/pokebench/
 
 ### CLI Usage
 
@@ -330,7 +330,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173/damagecalc/. All pages (K Calc, Team Builder, Compare, PokéFinder, OHKO Calc, Match History) are served from the same dev server.
+Open http://localhost:5173/. All pages (K Calc, Team Builder, Compare, PokéFinder, OHKO Calc, Match History) are served from the same dev server.
 
 ### Deployment
 

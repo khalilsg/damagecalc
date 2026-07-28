@@ -15,7 +15,7 @@ A specification detailed enough to re-create this project from scratch. Written 
 
 The core loop the suite supports: **build a team → analyze it against expected opponents → track a live match → record the result.**
 
-- Hosted on GitHub Pages at `https://<user>.github.io/damagecalc/`
+- Hosted on GitHub Pages at `https://<user>.github.io/`
 - One repo, one Vite multi-page app, no backend — all persistence is `localStorage`, all data is fetched from public sources or bundled at build time
 
 ## 2. Tech Stack & Constraints
@@ -23,7 +23,7 @@ The core loop the suite supports: **build a team → analyze it against expected
 | Choice | Detail |
 |---|---|
 | Language | Vanilla JavaScript, ES modules. No framework, no TypeScript. |
-| Build | Vite multi-page app. Every HTML entry point must be listed in `vite.config.js` → `build.rollupOptions.input`. `base: '/damagecalc/'`. |
+| Build | Vite multi-page app. Every HTML entry point must be listed in `vite.config.js` → `build.rollupOptions.input`. `base: '/'`. |
 | Damage engine | `@smogon/calc` (^0.11), `Generations.get(9)`. |
 | Styling | Per-page inline `<style>` blocks in each HTML file. No shared CSS file; shared *look* is by convention (§10). The nav bar injects its own styles from JS. |
 | Persistence | `localStorage` only (§9). |
@@ -239,7 +239,7 @@ Light theme: page bg `#f4f4f2`, text `#1a1a1a`, white cards with `1px solid #e5e
 
 - **Versioning** (`src/version.js`, shown in nav): same-day follow-up push → bump 3rd number; first push of the day (minor) → 2nd; new page/major → 1st. Docs/CI-only pushes don't bump.
 - Monthly data refresh: `npm run update-chaos -- --month YYYY-MM`, commit `public/data/chaos/`, push (CI redeploys). Keep `KNOWN_FORMATS` (first = default) and the script's `DEFAULT_PREFIXES` in sync with available formats.
-- Node ≥ 20 locally (CI uses 24). `npm run dev` serves everything at `http://localhost:5173/damagecalc/`.
+- Node ≥ 20 locally (CI uses 24). `npm run dev` serves everything at `http://localhost:5173/`.
 
 ## 12. Suggested Re-Creation Order
 

@@ -3,14 +3,14 @@ import { VERSION } from './version.js';
 const NAV_HEIGHT = 40;
 
 const PAGES = [
-  { label: 'Hub',           href: '/damagecalc/hub.html' },
-  { label: 'K Calc',        href: '/damagecalc/' },
-  { label: 'Team Builder',  href: '/damagecalc/teambuilder.html' },
-  { label: 'Compare',       href: '/damagecalc/compare.html' },
-  { label: 'PokéFinder',    href: '/damagecalc/moveset.html' },
-  { label: 'OHKO Calc',     href: '/damagecalc/ohko.html' },
-  { label: 'Match History', href: '/damagecalc/history.html' },
-  { label: 'PokéBench',     href: '/damagecalc/pokebench/' },
+  { label: 'Hub',           href: '/hub.html' },
+  { label: 'K Calc',        href: '/' },
+  { label: 'Team Builder',  href: '/teambuilder.html' },
+  { label: 'Compare',       href: '/compare.html' },
+  { label: 'PokéFinder',    href: '/moveset.html' },
+  { label: 'OHKO Calc',     href: '/ohko.html' },
+  { label: 'Match History', href: '/history.html' },
+  { label: 'PokéBench',     href: '/pokebench/' },
 ];
 
 const style = document.createElement('style');

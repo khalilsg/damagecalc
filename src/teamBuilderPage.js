@@ -524,14 +524,14 @@ loadBtn.addEventListener('click', () => {
   const paste = buildFullPaste();
   if (!paste) { showStatus('No Pokémon added yet.', true); return; }
   localStorage.setItem('kcalc_builder_team', paste);
-  window.location.href = '/damagecalc/';
+  window.location.href = '/';
 });
 
 pokebenchBtn.addEventListener('click', () => {
   const paste = buildFullPaste();
   if (!paste) { showStatus('No Pokémon added yet.', true); return; }
   const encoded = btoa(unescape(encodeURIComponent(paste)));
-  window.open(`/damagecalc/pokebench/?team=${encoded}`, '_blank', 'noopener,noreferrer');
+  window.open(`/pokebench/?team=${encoded}`, '_blank', 'noopener,noreferrer');
 });
 
 // ── Import from paste button ──────────────────────────────────────────────────
