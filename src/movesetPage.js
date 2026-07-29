@@ -98,6 +98,7 @@ function serebiiUrl(name) {
 
 let selectedMoves   = [];
 let selectedAbility = null;
+let selectedTypes   = [];
 let hideMegas   = false;
 let lastListAll = false;
 let sortKey = 'bst';
@@ -115,7 +116,7 @@ function el(tag, cls, text) {
 
 // ── Generic autocomplete ──────────────────────────────────────────────────────
 
-function initAutocomplete({ inputId, dropdownId, getNames, onPick, maxResults = 50 }) {
+function initAutocomplete({ inputId, dropdownId, getNames, onPick, maxResults = 50, decorateItem }) {
   const input    = document.getElementById(inputId);
   const dropdown = document.getElementById(dropdownId);
   let items = [], activeIdx = -1;
@@ -133,6 +134,7 @@ function initAutocomplete({ inputId, dropdownId, getNames, onPick, maxResults = 
     if (!hits.length || !q) { dropdown.classList.remove('open'); return; }
     for (const name of hits) {
       const item = el('div', 'ml-dd-item', name);
+      decorateItem?.(item, name);
       item.addEventListener('mousedown', e => { e.preventDefault(); pick(name); });
       dropdown.append(item);
       items.push(item);
@@ -227,9 +229,40 @@ function renderAbilityChip() {
   area.append(chip);
 }
 
+// ── Type chips (up to 2) ─────────────────────────────────────────────────────
+
+function addType(name) {
+  if (selectedTypes.includes(name) || selectedTypes.length >= 2) return;
+  selectedTypes.push(name);
+  renderTypeChips();
+  updateBtn();
+}
+
+function removeType(name) {
+  selectedTypes = selectedTypes.filter(t => t !== name);
+  renderTypeChips();
+  updateBtn();
+}
+
+function renderTypeChips() {
+  const area = document.getElementById('type-chips');
+  area.innerHTML = '';
+  for (const name of selectedTypes) {
+    const chip = el('span', 'ml-chip type-chip');
+    chip.style.background = TYPE_COLORS[name] ?? '#888';
+    chip.append(document.createTextNode(name + ' '));
+    const btn = el('button', 'ml-chip-remove');
+    btn.textContent = '×';
+    btn.title = 'Remove';
+    btn.addEventListener('click', () => removeType(name));
+    chip.append(btn);
+    area.append(chip);
+  }
+}
+
 function updateBtn() {
   document.getElementById('find-btn').disabled =
-    selectedMoves.length === 0 && !selectedAbility;
+    selectedMoves.length === 0 && !selectedAbility && selectedTypes.length === 0;
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -239,7 +272,7 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
   const errorEl = document.getElementById('ml-error');
   errorEl.textContent = '';
 
-  if (!listAll && selectedMoves.length === 0 && !selectedAbility) return;
+  if (!listAll && selectedMoves.length === 0 && !selectedAbility && selectedTypes.length === 0) return;
   lastListAll = listAll;
 
   btn.textContent = 'LOADING…';
@@ -270,6 +303,12 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
   for (const { name, species: s, abilities, isMega } of species) {
     // Mega filter
     if (hideMegas && isMega) continue;
+
+    // Type filter — Pokémon must have every selected type
+    if (selectedTypes.length > 0) {
+      const types = s.types ?? [];
+      if (!selectedTypes.every(t => types.includes(t))) continue;
+    }
 
     // Ability filter (uses PS Pokédex data — includes all three ability slots)
     if (selectedAbility && !abilities.includes(selectedAbility)) continue;
@@ -338,6 +377,14 @@ const TYPE_COLORS = {
   Steel: '#5a8ea2', Fairy: '#ec8fe6',
 };
 
+const TYPE_NAMES = Object.keys(TYPE_COLORS).sort();
+
+function typeBadge(type) {
+  const badge = el('span', 'ml-type-badge', type);
+  badge.style.background = TYPE_COLORS[type] ?? '#888';
+  return badge;
+}
+
 // ── Render table ──────────────────────────────────────────────────────────────
 
 function renderTable() {
@@ -365,9 +412,7 @@ function renderTable() {
 
     const typesTd = el('td', 'ml-td ml-td-types');
     for (const type of row.types) {
-      const badge = el('span', 'ml-type-badge', type);
-      badge.style.background = TYPE_COLORS[type] ?? '#888';
-      typesTd.append(badge);
+      typesTd.append(typeBadge(type));
     }
     tr.append(typesTd);
 
@@ -402,6 +447,17 @@ initAutocomplete({
   maxResults: 30,
 });
 
+initAutocomplete({
+  inputId:    'type-input',
+  dropdownId: 'type-dropdown',
+  getNames:   () => TYPE_NAMES,
+  onPick:     addType,
+  maxResults: 18,
+  // Show the type as its colored badge, matching the results table. Badge text
+  // is the type name, so item.textContent (used by keyboard Enter) is unchanged.
+  decorateItem: (item, name) => { item.textContent = ''; item.append(typeBadge(name)); },
+});
+
 updateBtn();
 
 document.getElementById('find-btn').addEventListener('click', () => runSearch());
@@ -413,14 +469,22 @@ document.getElementById('hide-megas').addEventListener('change', e => {
     runSearch({ listAll: lastListAll, scroll: false });
   }
 });
+const hasFilters = () =>
+  selectedMoves.length > 0 || selectedAbility || selectedTypes.length > 0;
+
 document.getElementById('move-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !document.querySelector('#move-dropdown .ml-dd-active')) {
-    if (selectedMoves.length > 0 || selectedAbility) runSearch();
+    if (hasFilters()) runSearch();
   }
 });
 document.getElementById('ability-input').addEventListener('keydown', e => {
   if (e.key === 'Enter' && !document.querySelector('#ability-dropdown .ml-dd-active')) {
-    if (selectedMoves.length > 0 || selectedAbility) runSearch();
+    if (hasFilters()) runSearch();
+  }
+});
+document.getElementById('type-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !document.querySelector('#type-dropdown .ml-dd-active')) {
+    if (hasFilters()) runSearch();
   }
 });
 
