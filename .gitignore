@@ -1,2 +1,6 @@
 node_modules/
 sets/
+
+# Build output. CI runs `npm run build` and uploads dist/ itself
+# (.github/workflows/deploy.yml), so a committed copy only goes stale.
+dist/
