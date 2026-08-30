@@ -207,7 +207,11 @@ Engine (`computeOhkoThresholds(attacker, opponentNames, options)` in calcEngine)
 UI: species/item/move inputs (move list = species' legal moves); ability select; two boost selects; weather/terrain selects; modifier toggle buttons; opponent chips + **Add Top 50** (top-50 by usage from `KNOWN_FORMATS[0]` bundled chaos, merged/deduped) + **Clear**. Results: summary bar (move, stat, species stat range, active-conditions caption) and a table — per opponent, per archetype: green `131 SpA` + cheapest spread, or `any spread`, or red `224 SpA — Impossible (max 167)`, or grey `No damage`. Yield with `setTimeout` (never `requestAnimationFrame` — it doesn't fire in hidden tabs) before the synchronous calc burst.
 
 ### 7.7 PokéFinder (`moveset.html` + `src/movesetPage.js`)
-Move chips (with equivalency groups) + optional ability chip → filter all Champions species: every move group satisfied (ANY member in learnset) AND ability present. Results table: types (colored badges), HP/Atk/Def/SpA/SpD/Spe, BST, eBST (= BST − min(Atk, SpA)), TR (= HP+Atk+Def+SpA+SpD+(100−Spe)), Bulk (= 2·HP+Def+SpD), Lo Blk (= HP+min(Def, SpD)). Sortable headers with `title` tooltips explaining each formula. Row click → Serebii Champions dex page. "List all" button skips filtering.
+Move chips (with equivalency groups) + optional ability chip + up to two type chips → filter a species list: every move group satisfied (ANY member in learnset) AND ability present AND every selected type on the species. Results table: types (colored badges), HP/Atk/Def/SpA/SpD/Spe, BST, eBST (= BST − min(Atk, SpA)), TR (= HP+Atk+Def+SpA+SpD+(100−Spe)), Bulk (= 2·HP+Def+SpD), Lo Blk (= HP+min(Def, SpD)). Sortable headers with `title` tooltips explaining each formula. "List all" button skips filtering.
+
+**Scope.** `Include Pokémon not in Champions` swaps the species list from the curated Champions roster (`getChampionsSpeciesIds` + Megas of those bases, via `@smogon/calc`) to the full Pokédex (`getAllSpeciesEntries`, PS Pokédex — fresher than calc's Gen 9 table, which is missing formes the mod has added such as the Mega-Z line; `num <= 0` drops CAP and Missingno; a forme whose stats, types and abilities all match its base species is dropped as a costume, and `NOISE_FORME` drops the ones that survive that test but still can't be built — Gmax, Totem, Terastallized Ogerpon, Let's Go starters). Legality per row comes from `getChampionsLegalityBatch`, which is `resolveId` against the Champions learnsets — so a forme inherits its base species' legality, the same resolution the move lookup uses. In all-Pokémon mode the table gains a sortable **Champ** column (✓ / —), the count line reports the Champions subset, rendering caps at `RENDER_CAP` rows behind a "Show all" button, and `Fully evolved only` (default on) hides NFEs. Champions mode is unchanged by all of this: no Champ column, no cap, no NFE filter.
+
+**Movepool source is legality-dependent.** Champions-legal rows match against the Champions movepool (`getChampionsMovesBatch`); everything else matches against every generation's learnset (`getAnyGenMovesBatch`), because a Pokémon cut from Gen 9 has no Gen 9 movepool to match. Row click → Serebii's Champions dex for legal Pokémon, `dex.pokemonshowdown.com` for the rest (Serebii's Champions dex has no page for them).
 
 ### 7.8 Match History (`history.html` + `src/historyPage.js`)
 Win/loss record with per-match cards (teams, reasons, note), loss-reason aggregation ("Loss patterns"), reason management, delete, and TSV export (date, outcome, team names, rosters, reasons, note).
@@ -229,6 +233,7 @@ K Calc clone that pre-loads a preset team + fixed opponents and auto-runs the an
 | `kcalc_builder_team` | raw paste string | Team Builder → K Calc (consumed & removed on load) |
 | `kcalc_match_history` | record array (§6) | Save Match modal → Match History page |
 | `kcalc_reasons` | string array | Match History |
+| `kcalc_finder_prefs` | `{hideMegas, includeAll, feOnly}` | PokéFinder scope toggles |
 | `?team=` | base64(UTF-8 paste) | Share button / Team Builder → K Calc, PokéBench |
 
 ## 10. Visual Language
@@ -248,7 +253,7 @@ Light theme: page bg `#f4f4f2`, text `#1a1a1a`, white cards with `1px solid #e5e
 3. K Calc static analysis: parse → `runAnalysis` → offense/defense/speed/summary tabs.
 4. `battleTracker.js` + sidebar + reactive re-render + expanded grids + live-stage views (`getOffensiveStat` from day one).
 5. Chaos pipeline (`scripts/update-chaos.js`, `leadSelector/chaos.js`) → lead selector + summary threat matrix/flags.
-6. `learnsets.js` (Champions list, abilities, Megas) → Team Builder (+ `savedTeams.js`), Compare, PokéFinder.
+6. `learnsets.js` (Champions list + legality, full Pokédex, abilities, Megas, Gen 9 / any-gen movepools) → Team Builder (+ `savedTeams.js`), Compare, PokéFinder.
 7. OHKO Calc (probe + binary search engine, then UI).
 8. Match History + Save Match modal; PokéBench CLI/web; demo page.
 9. GitHub Actions deploy workflow.

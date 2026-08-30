@@ -170,6 +170,14 @@
     }
     .ml-toggle input { cursor: pointer; width: 15px; height: 15px; accent-color: #4a3580; }
 
+    .ml-toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 18px;
+      margin-bottom: 12px;
+    }
+    .ml-toggles .ml-toggle { margin-bottom: 0; }
+
     .ml-error {
       color: #c0392b;
       font-size: 0.82rem;
@@ -179,6 +187,8 @@
 
     /* ── Results ── */
     #ml-results { max-width: 900px; }
+    /* The Champ column needs another ~90px before the table starts scrolling. */
+    #ml-results.ml-wide { max-width: 1000px; }
 
     .ml-results-header {
       display: flex;
@@ -287,6 +297,12 @@
       font-size: 0.85rem;
     }
 
+    .ml-more { padding: 14px; text-align: center; }
+
+    .ml-th-champ, .ml-td-champ { text-align: center; }
+    .ml-champ-yes { color: #2a7a2a; font-weight: 700; }
+    .ml-champ-no  { color: #c4c4c4; }
+
     /* ── Mobile ── */
     @media (max-width: 600px) {
       body { padding: 14px; }
@@ -333,10 +349,20 @@
     </div>
     <div id="type-chips" class="ml-chips"></div>
 
-    <label class="ml-toggle">
-      <input type="checkbox" id="hide-megas" />
-      Hide mega evolutions
-    </label>
+    <div class="ml-toggles">
+      <label class="ml-toggle">
+        <input type="checkbox" id="hide-megas" />
+        Hide mega evolutions
+      </label>
+      <label class="ml-toggle" title="Search the whole Pokédex. Pokémon outside Champions are matched against every generation's learnset.">
+        <input type="checkbox" id="include-all" />
+        Include Pokémon not in Champions
+      </label>
+      <label class="ml-toggle" id="fe-only-wrap" style="display:none">
+        <input type="checkbox" id="fe-only" checked />
+        Fully evolved only
+      </label>
+    </div>
 
     <div style="margin-top:4px; display:flex; gap:8px; flex-wrap:wrap;">
       <button id="find-btn" class="ml-btn" disabled>FIND POKÉMON</button>
@@ -354,6 +380,7 @@
       <table class="ml-table">
         <thead>
           <tr>
+            <th id="ml-th-champ" class="ml-th-sortable ml-th-champ" data-sort="champ" style="display:none" title="Champions legality — ✓ legal in Champions, — not in Champions (movepool matched against every generation's learnset)">Champ <span class="ml-sort-arrow"></span></th>
             <th>Name</th>
             <th>Type</th>
             <th class="ml-th-sortable" data-sort="hp" title="Hit Points">HP <span class="ml-sort-arrow"></span></th>

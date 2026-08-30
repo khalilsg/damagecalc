@@ -1,8 +1,9 @@
 // Two learnset sources:
 //   1. Champions mod  — github.com/smogon/pokemon-showdown (master), open CORS
 //      Authoritative list of what each Pokémon can legally use in the Champions format.
-//   2. Base Gen 9     — play.pokemonshowdown.com/data/learnsets.js, open CORS
-//      Full Gen 9 learnsets; used only as a fallback for non-Champions Pokémon.
+//   2. Base learnsets — play.pokemonshowdown.com/data/learnsets.js, open CORS
+//      Every generation's learnsets; used as a fallback for non-Champions
+//      Pokémon, either filtered to Gen 9 or as an any-generation union.
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -94,6 +95,23 @@ export async function getChampionsMovesBatch(names) {
   return result;
 }
 
+/**
+ * Batch Champions legality check.
+ *
+ * A species counts as legal when the Champions mod has a learnset that applies
+ * to it — the same resolution `getChampionsMovesBatch` uses, so a forme (Mega,
+ * Blade, Therian…) inherits its base species' legality.
+ *
+ * @param {string[]} names  display names
+ * @returns {Promise<Map<string, boolean>>}
+ */
+export async function getChampionsLegalityBatch(names) {
+  const learnsets = await fetchChampionsLearnsets();
+  const result = new Map();
+  for (const name of names) result.set(name, resolveId(name, learnsets) !== null);
+  return result;
+}
+
 // ── Champions item legality overrides ─────────────────────────────────────────
 // The Champions mod's items.ts is a *diff* over base Gen 9, not a whitelist:
 //   isNonstandard: "Past"  → banned in Champions
@@ -180,6 +198,46 @@ export async function getAbilitiesBatch(psIds) {
   return result;
 }
 
+const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+
+function isCosmeticForme(entry, base) {
+  if (!base || base === entry) return false;
+  return STAT_KEYS.every(k => entry.baseStats[k] === base.baseStats?.[k])
+    && (entry.types ?? []).join() === (base.types ?? []).join()
+    && Object.values(entry.abilities ?? {}).join() === Object.values(base.abilities ?? {}).join();
+}
+
+/**
+ * Every real Pokémon in the Pokédex, with the data the PokéFinder tables need.
+ *
+ * The Pokédex is the freshest species list available — @smogon/calc's Gen 9
+ * table is missing formes the Champions mod has added (the Mega-Z line, for
+ * one). CAP Pokémon and Missingno have num <= 0 and are dropped.
+ *
+ * @returns {Promise<Array<{id, name, forme, baseStats, types, abilities, nfe}>>}
+ */
+export async function getAllSpeciesEntries() {
+  const dex = await fetchPSPokedex();
+  const result = [];
+  for (const [id, entry] of Object.entries(dex)) {
+    if ((entry.num ?? 0) <= 0 || !entry.baseStats) continue;
+    // A forme with its base species' stats, types and abilities is a costume
+    // (Pikachu's caps, Vivillon's wing patterns, Genesect's drives) and would
+    // just repeat the same row.
+    if (isCosmeticForme(entry, dex[toPsId(entry.baseSpecies ?? '')])) continue;
+    result.push({
+      id,
+      name: entry.name,
+      forme: entry.forme ?? '',
+      baseStats: entry.baseStats,
+      types: entry.types ?? [],
+      abilities: Object.values(entry.abilities ?? {}).filter(Boolean),
+      nfe: !!entry.evos?.length,
+    });
+  }
+  return result;
+}
+
 /**
  * Returns Mega form data for every Champions-legal base species.
  * Mega forms inherit their learnset from the base species; stats, types,
@@ -207,27 +265,31 @@ export async function getChampionsMegaForms(champIds) {
   return result;
 }
 
-// ── Base Gen 9 learnsets (fallback) ──────────────────────────────────────────
+// ── Base learnsets (non-Champions fallback) ──────────────────────────────────
+// One file from Pokémon Showdown carries every generation's learnset. Gen 9
+// legality is the subset whose move codes start with "9"; the unfiltered union
+// ("has ever learned it") is what the PokéFinder uses for Pokémon that aren't
+// in Champions, since the mod re-enables plenty of past-generation content.
 
-let _gen9 = null;
-let _gen9Promise = null;
+let _psLearnsets = null;
+let _psLearnsetsPromise = null;
 
-async function fetchGen9Learnsets() {
-  if (_gen9) return _gen9;
-  if (_gen9Promise) return _gen9Promise;
+async function fetchPSLearnsets() {
+  if (_psLearnsets) return _psLearnsets;
+  if (_psLearnsetsPromise) return _psLearnsetsPromise;
 
-  _gen9Promise = (async () => {
+  _psLearnsetsPromise = (async () => {
     const res = await fetch('https://play.pokemonshowdown.com/data/learnsets.js');
-    if (!res.ok) throw new Error('Failed to fetch Gen 9 learnsets from Pokémon Showdown');
+    if (!res.ok) throw new Error('Failed to fetch learnsets from Pokémon Showdown');
     const text = await res.text();
     const mod = {};
     // eslint-disable-next-line no-new-func
     new Function('exports', text)(mod);
-    _gen9 = mod.BattleLearnsets ?? {};
-    return _gen9;
+    _psLearnsets = mod.BattleLearnsets ?? {};
+    return _psLearnsets;
   })();
 
-  return _gen9Promise;
+  return _psLearnsetsPromise;
 }
 
 /**
@@ -236,7 +298,7 @@ async function fetchGen9Learnsets() {
  * (e.g. when using the Compare page to compare non-Champions Pokémon).
  */
 export async function getGen9Moves(displayName) {
-  const learnsets = await fetchGen9Learnsets();
+  const learnsets = await fetchPSLearnsets();
   const id = resolveId(displayName, learnsets);
   if (!id) return [];
   const learnset = learnsets[id]?.learnset ?? {};
@@ -252,7 +314,7 @@ export async function getGen9Moves(displayName) {
  * Batch Gen 9 move lookup (for non-Champions contexts).
  */
 export async function getGen9MovesBatch(names) {
-  const learnsets = await fetchGen9Learnsets();
+  const learnsets = await fetchPSLearnsets();
   const result = new Map();
   for (const name of names) {
     const id = resolveId(name, learnsets);
@@ -263,6 +325,24 @@ export async function getGen9MovesBatch(names) {
       if (codes.some(c => c.startsWith('9'))) moves.add(moveId);
     }
     result.set(name, moves);
+  }
+  return result;
+}
+
+/**
+ * Batch any-generation move lookup — every move the Pokémon has ever learned,
+ * regardless of generation. Pokémon cut from Scarlet/Violet have no Gen 9
+ * learnset at all, so a Gen 9 lookup would report them as learning nothing.
+ *
+ * @param {string[]} names  display names
+ * @returns {Promise<Map<string, Set<string>>>}  name → Set of move IDs
+ */
+export async function getAnyGenMovesBatch(names) {
+  const learnsets = await fetchPSLearnsets();
+  const result = new Map();
+  for (const name of names) {
+    const id = resolveId(name, learnsets);
+    result.set(name, id ? new Set(Object.keys(learnsets[id]?.learnset ?? {})) : new Set());
   }
   return result;
 }

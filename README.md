@@ -19,7 +19,7 @@ For architecture and implementation details, see the [design doc](docs/DESIGN.md
 | **Team Builder** | Visual slot-by-slot team editor; exports a Showdown paste or loads directly into K Calc |
 | **PokéBench** | Web and CLI tool — benchmark a Pokémon against real Smogon usage data |
 | **Compare** | Side-by-side base stat butterfly chart + full Champions movepools for any two Pokémon |
-| **PokéFinder** | Filter every Champions-legal Pokémon by moves and/or ability; sort results by any stat |
+| **PokéFinder** | Filter Champions-legal Pokémon — or the whole Pokédex — by moves, ability, and typing; sort results by any stat |
 | **OHKO Calc** | Find the exact Atk/SpA stat needed to guarantee an OHKO on each opponent with a given move |
 | **Match History** | Log and review matches with per-game results, team snapshots, and TSV export |
 
@@ -276,19 +276,34 @@ Pick any two Champions-legal Pokémon to compare them side by side:
 
 ## PokéFinder
 
-Filter every Champions-legal Pokémon by the moves and/or ability they can learn. Useful for finding coverage options or scouting what can fill a specific role.
+Filter Pokémon by the moves, ability, and/or typing they can bring. Useful for finding coverage options or scouting what can fill a specific role — in Champions, or across the whole Pokédex.
 
 ### How it works
 
 1. Add one or more moves (with move-equivalency grouping for functionally identical moves, e.g. Acid Armor / Iron Defense / Shelter)
-2. Optionally add an ability filter
+2. Optionally add an ability and up to two types
 3. Click **FIND POKÉMON** — results show every Pokémon that satisfies all filters
-4. Click any row to open that Pokémon's Serebii Champions page
+4. Click any row to open that Pokémon's dex page (Serebii's Champions dex, or the Showdown dex for Pokémon outside Champions)
+
+### Scope
+
+By default the search covers Champions-legal Pokémon only. Three checkboxes widen or narrow it:
+
+| Toggle | Effect |
+|--------|--------|
+| **Include Pokémon not in Champions** | Search the whole Pokédex. Adds a **Champ** column — ✓ legal in Champions, — not (yet) in it — that sorts like any other, so you can rank the full dex and see at a glance what's out of reach |
+| **Fully evolved only** | All-Pokémon mode only, on by default — roughly a third of the dex is unevolved and would otherwise bury the results |
+| **Hide mega evolutions** | Drops Mega and Primal formes |
+
+Champions-legal Pokémon are always matched against the **Champions movepool**. Pokémon outside Champions are matched against **every generation's learnset** — anything cut from Scarlet/Violet has no Gen 9 movepool at all, so a strict Gen 9 lookup would report them as learning nothing. Treat a — row's movepool as "has learned this at some point," not as a legality claim.
+
+All three toggles are remembered between visits.
 
 ### Result columns
 
 | Column | What it shows |
 |--------|--------------|
+| Champ | Champions legality — ✓ legal, — not in Champions (all-Pokémon mode only) |
 | HP / Atk / Def / SpA / SpD / Spe | Base stats |
 | BST | Base Stat Total |
 | eBST | Effective BST — BST minus the weaker offensive stat (min of Atk, SpA) |
