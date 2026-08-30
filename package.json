@@ -12,13 +12,15 @@
     "build": "vite build",
     "dev": "vite",
     "pokebench": "node pokebench/index.js",
-    "update-chaos": "node scripts/update-chaos.js"
+    "update-chaos": "node scripts/update-chaos.js",
+    "test:e2e": "node --test tests/*.e2e.test.js"
   },
   "dependencies": {
     "@smogon/calc": "^0.11.0",
     "commander": "^14.0.3"
   },
   "devDependencies": {
+    "playwright": "^1.62.1",
     "vite": "^8.0.8"
   }
 }

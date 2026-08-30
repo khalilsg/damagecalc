@@ -354,10 +354,19 @@ Deployment is automatic: pushing to `main` triggers the **Deploy to GitHub Pages
 ### Tests
 
 ```
-node --test tests/*.test.js
+npm test
 ```
 
-Covers Champions EV scaling, terrain modifiers, and the lead selector.
+Runs the unit tests (Champions EV scaling, terrain modifiers, the lead selector) and the PokéFinder browser test.
+
+**Browser test.** `tests/pokefinder.e2e.test.js` drives the real PokéFinder page in headless Chromium against a Vite dev server it starts itself, covering the Champions / all-Pokémon scope switch, the legality column, the movepool split, and the filters. It needs a browser:
+
+```
+npx playwright install chromium
+npm run test:e2e
+```
+
+Without one, the browser test is **skipped** rather than failed, so `npm test` still passes on a machine with no browsers installed. The three remote data files the page fetches (PS Pokédex, PS learnsets, Champions learnsets) are stubbed from `tests/fixtures/pokefinderData.js` — small, hand-built, and deterministic, so the test never touches the network and its assertions don't drift when Pokémon Showdown updates. Extend that fixture, not the assertions, when adding a case.
 
 ### Versioning
 
