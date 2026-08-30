@@ -245,6 +245,7 @@ Light theme: page bg `#f4f4f2`, text `#1a1a1a`, white cards with `1px solid #e5e
 - **Versioning** (`src/version.js`, shown in nav): same-day follow-up push → bump 3rd number; first push of the day (minor) → 2nd; new page/major → 1st. Docs/CI-only pushes don't bump.
 - Monthly data refresh: `npm run update-chaos -- --month YYYY-MM`, commit `public/data/chaos/`, push (CI redeploys). Keep `KNOWN_FORMATS` (first = default) and the script's `DEFAULT_PREFIXES` in sync with available formats.
 - Node ≥ 20 locally (CI uses 24). `npm run dev` serves everything at `http://localhost:5173/`.
+- Tests: `npm test` runs `node --test tests/*.test.js` — unit tests plus `tests/pokefinder.e2e.test.js`, which drives the PokéFinder page in headless Chromium (Playwright) against a Vite server it starts itself, with the page's three remote data files stubbed from `tests/fixtures/pokefinderData.js`. That fixture is deliberately tiny and hand-built so assertions can be exact; add cases by extending it. The suite skips itself when Playwright has no browser installed (`npx playwright install chromium` to enable), so it never blocks a machine without one.
 
 ## 12. Suggested Re-Creation Order
 
