@@ -1,6 +1,9 @@
 import './siteHeader.js';
 import { gen } from './calcEngine.js';
-import { getChampionsSpeciesIds, getChampionsMovesBatch, getAbilitiesBatch, getChampionsMegaForms } from './learnsets.js';
+import {
+  getChampionsSpeciesIds, getChampionsMovesBatch, getChampionsLegalityBatch,
+  getAbilitiesBatch, getChampionsMegaForms, getAllSpeciesEntries, getAnyGenMovesBatch,
+} from './learnsets.js';
 import { MOVE_EQUIVALENCIES } from './moveEquivalencies.js';
 
 // ── Equivalency lookup tables (built once at module load) ─────────────────────
@@ -33,7 +36,11 @@ async function ensureChampionsSpecies() {
   for (const id of ids) {
     const species = gen.species.get(id);
     if (!species) continue;
-    champSpecies.push({ id, name: species.name, species, abilities: abilityMap.get(id) ?? [], isMega: false });
+    champSpecies.push({
+      id, name: species.name, species,
+      abilities: abilityMap.get(id) ?? [],
+      isMega: false, isChamp: true, nfe: !!species.nfe,
+    });
   }
 
   // Mega forms inherit their learnset from the base species (handled by resolveId
@@ -44,26 +51,58 @@ async function ensureChampionsSpecies() {
       name: mega.name,
       species: { baseStats: mega.baseStats, types: mega.types },
       abilities: mega.abilities,
-      isMega: true,
+      isMega: true, isChamp: true, nfe: false,
     });
   }
 
   return champSpecies;
 }
 
-// ── Ability names (from Champions species only) ───────────────────────────────
+// ── Full species list (Champions + everything else) ───────────────────────────
 
-let champAbilityNames = null;
+// Formes that can't be built in Champions and that getAllSpeciesEntries' cosmetic
+// check doesn't catch, because their stats differ from their base species':
+// Gmax and Totem boosts, Terastallized Ogerpon, and the Let's Go starters.
+const NOISE_FORME = /Gmax|Totem|Tera$|^Starter$/;
+const MEGA_FORME  = /^(Mega|Primal)/;
+
+let allSpecies = null;
+
+async function ensureAllSpecies() {
+  if (allSpecies) return allSpecies;
+
+  const entries = (await getAllSpeciesEntries()).filter(e => !NOISE_FORME.test(e.forme));
+  const legalMap = await getChampionsLegalityBatch(entries.map(e => e.name));
+
+  allSpecies = entries.map(e => ({
+    id: e.id,
+    name: e.name,
+    species: { baseStats: e.baseStats, types: e.types },
+    abilities: e.abilities,
+    isMega: MEGA_FORME.test(e.forme),
+    isChamp: legalMap.get(e.name) ?? false,
+    nfe: e.nfe,
+  }));
+
+  return allSpecies;
+}
+
+const ensureSpeciesList = () => (includeAll ? ensureAllSpecies() : ensureChampionsSpecies());
+
+// ── Ability names (from whichever species list is in scope) ───────────────────
+
+const abilityNames = { champions: null, all: null };
 
 async function ensureAbilityNames() {
-  if (champAbilityNames) return champAbilityNames;
-  const species = await ensureChampionsSpecies();
+  const key = includeAll ? 'all' : 'champions';
+  if (abilityNames[key]) return abilityNames[key];
+  const species = await ensureSpeciesList();
   const set = new Set();
   for (const { abilities } of species) {
     for (const name of abilities) set.add(name);
   }
-  champAbilityNames = [...set].sort();
-  return champAbilityNames;
+  abilityNames[key] = [...set].sort();
+  return abilityNames[key];
 }
 
 // ── Move names (for autocomplete hints) ──────────────────────────────────────
@@ -94,16 +133,50 @@ function serebiiUrl(name) {
   return `https://www.serebii.net/pokedex-champions/${name.toLowerCase().split('-')[0].replace(/\s/g, '')}/`;
 }
 
+// Serebii's Champions dex only covers Champions-legal Pokémon; everything else
+// goes to the PS dex, which carries every species and forme.
+function dexUrl({ name, isChamp }) {
+  return isChamp
+    ? serebiiUrl(name)
+    : `https://dex.pokemonshowdown.com/pokemon/${name.toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 let selectedMoves   = [];
 let selectedAbility = null;
 let selectedTypes   = [];
 let hideMegas   = false;
+let includeAll  = false;  // search the full dex, not just Champions-legal Pokémon
+let feOnly      = true;   // all-Pokémon mode only — the dex is half unevolved Pokémon
 let lastListAll = false;
 let sortKey = 'bst';
 let sortAsc  = false;
 let results  = [];
+let showAllRows = false;
+
+// Rendering every row of the full dex at once is the slow part of a search, and
+// the interesting Pokémon are at the top of the sort anyway. The curated
+// Champions list is small enough to always render whole.
+const RENDER_CAP = 250;
+
+// ── Saved toggles ─────────────────────────────────────────────────────────────
+
+const PREFS_KEY = 'kcalc_finder_prefs';
+
+function loadPrefs() {
+  let prefs = {};
+  try { prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) ?? {}; } catch { /* ignore */ }
+  hideMegas  = !!prefs.hideMegas;
+  includeAll = !!prefs.includeAll;
+  feOnly     = prefs.feOnly ?? true;
+}
+
+function savePrefs() {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ hideMegas, includeAll, feOnly }));
+  } catch { /* private mode — toggles just don't persist */ }
+}
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
@@ -283,14 +356,22 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
     EQUIV_LABEL_TO_IDS.get(label) ?? [toMoveId(label)]
   );
 
-  let species, movesets;
+  let species, champMovesets, otherMovesets;
   try {
-    species = await ensureChampionsSpecies();
+    species = await ensureSpeciesList();
     if (selectedMoves.length > 0) {
-      movesets = await getChampionsMovesBatch(species.map(s => s.name));
+      // Champions-legal Pokémon are matched against the Champions movepool;
+      // everything else against every generation's learnset, since a Pokémon
+      // cut from Gen 9 has no Gen 9 movepool to match at all.
+      const champNames = [], otherNames = [];
+      for (const entry of species) (entry.isChamp ? champNames : otherNames).push(entry.name);
+      [champMovesets, otherMovesets] = await Promise.all([
+        getChampionsMovesBatch(champNames),
+        otherNames.length ? getAnyGenMovesBatch(otherNames) : new Map(),
+      ]);
     }
   } catch (e) {
-    errorEl.textContent = `Failed to load Champions data: ${e.message}`;
+    errorEl.textContent = `Failed to load Pokémon data: ${e.message}`;
     btn.textContent = 'FIND POKÉMON';
     btn.disabled    = false;
     return;
@@ -300,9 +381,12 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
   btn.disabled    = false;
 
   results = [];
-  for (const { name, species: s, abilities, isMega } of species) {
+  for (const { name, species: s, abilities, isMega, isChamp, nfe } of species) {
     // Mega filter
     if (hideMegas && isMega) continue;
+
+    // Fully-evolved filter (all-Pokémon mode only — the Champions list is curated)
+    if (includeAll && feOnly && nfe) continue;
 
     // Type filter — Pokémon must have every selected type
     if (selectedTypes.length > 0) {
@@ -315,7 +399,7 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
 
     // Move filter — each group satisfied if Pokémon has ANY move in that group
     if (moveGroups.length > 0) {
-      const moveset = movesets?.get(name);
+      const moveset = (isChamp ? champMovesets : otherMovesets)?.get(name);
       if (!moveset || !moveGroups.every(ids => ids.some(id => moveset.has(id)))) continue;
     }
 
@@ -327,6 +411,8 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
     const lobulk  = bs.hp + Math.min(bs.def, bs.spd);
     results.push({
       name,
+      isChamp,
+      champ: isChamp ? 1 : 0,  // sortable form of the Champ column
       types: s.types ?? [],
       hp: bs.hp, atk: bs.atk, def: bs.def,
       spa: bs.spa, spd: bs.spd, spe: bs.spe,
@@ -334,10 +420,11 @@ async function runSearch({ listAll = false, scroll = true } = {}) {
     });
   }
 
+  showAllRows = false;
   sortResults();
   renderTable();
+  renderCount();
 
-  document.getElementById('ml-count').textContent = `${results.length} Pokémon`;
   const wrapEl = document.getElementById('ml-results');
   wrapEl.style.display = 'block';
   if (scroll) wrapEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -387,26 +474,51 @@ function typeBadge(type) {
 
 // ── Render table ──────────────────────────────────────────────────────────────
 
+const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst', 'trspeed', 'bulk', 'lobulk'];
+
+const COLUMN_COUNT = () => STAT_KEYS.length + (includeAll ? 3 : 2); // + name, type, champ
+
+function renderCount() {
+  const champCount = results.reduce((n, r) => n + r.champ, 0);
+  document.getElementById('ml-count').textContent = includeAll
+    ? `${results.length} Pokémon · ${champCount} in Champions`
+    : `${results.length} Pokémon`;
+}
+
 function renderTable() {
   const tbody = document.getElementById('ml-tbody');
   tbody.innerHTML = '';
 
+  // The Champ column only says something once non-Champions Pokémon are in scope.
+  document.getElementById('ml-th-champ').style.display = includeAll ? '' : 'none';
+  document.getElementById('ml-results').classList.toggle('ml-wide', includeAll);
+
   if (results.length === 0) {
     const tr = document.createElement('tr');
-    const td = el('td', 'ml-empty', 'No Champions Pokémon match the selected filters.');
-    td.colSpan = 13;
+    const td = el('td', 'ml-empty', includeAll
+      ? 'No Pokémon match the selected filters.'
+      : 'No Champions Pokémon match the selected filters.');
+    td.colSpan = COLUMN_COUNT();
     tr.append(td);
     tbody.append(tr);
     return;
   }
 
-  const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe', 'bst', 'ebst', 'trspeed', 'bulk', 'lobulk'];
+  const capped = includeAll && !showAllRows;
+  const shown  = capped ? results.slice(0, RENDER_CAP) : results;
 
-  for (const row of results) {
+  for (const row of shown) {
     const tr = document.createElement('tr');
     tr.className = 'ml-row-clickable';
-    tr.title     = `Open ${row.name} on Serebii`;
-    tr.addEventListener('click', () => window.open(serebiiUrl(row.name), '_blank', 'noopener'));
+    tr.title     = row.isChamp ? `Open ${row.name} on Serebii` : `Open ${row.name} on the Showdown dex`;
+    tr.addEventListener('click', () => window.open(dexUrl(row), '_blank', 'noopener'));
+
+    if (includeAll) {
+      const champTd = el('td', 'ml-td ml-td-champ');
+      champTd.append(el('span', row.isChamp ? 'ml-champ-yes' : 'ml-champ-no', row.isChamp ? '✓' : '—'));
+      champTd.title = row.isChamp ? 'Legal in Champions' : 'Not in Champions';
+      tr.append(champTd);
+    }
 
     tr.append(el('td', 'ml-td ml-td-name', row.name));
 
@@ -425,10 +537,22 @@ function renderTable() {
 
     tbody.append(tr);
   }
+
+  if (shown.length < results.length) {
+    const tr = document.createElement('tr');
+    const td = el('td', 'ml-more');
+    td.colSpan = COLUMN_COUNT();
+    const btn = el('button', 'ml-btn ml-btn-secondary', `Show all ${results.length}`);
+    btn.addEventListener('click', () => { showAllRows = true; renderTable(); });
+    td.append(btn);
+    tr.append(td);
+    tbody.append(tr);
+  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
+loadPrefs();
 ensureMoveNames();
 ensureAbilityNames(); // pre-fetch so autocomplete is fast
 
@@ -442,7 +566,7 @@ initAutocomplete({
 initAutocomplete({
   inputId:    'ability-input',
   dropdownId: 'ability-dropdown',
-  getNames:   () => champAbilityNames,
+  getNames:   () => abilityNames[includeAll ? 'all' : 'champions'],
   onPick:     setAbility,
   maxResults: 30,
 });
@@ -462,13 +586,40 @@ updateBtn();
 
 document.getElementById('find-btn').addEventListener('click', () => runSearch());
 document.getElementById('list-all-btn').addEventListener('click', () => runSearch({ listAll: true }));
-document.getElementById('hide-megas').addEventListener('change', e => {
-  hideMegas = e.target.checked;
+
+// ── Scope toggles ─────────────────────────────────────────────────────────────
+
+const hideMegasBox  = document.getElementById('hide-megas');
+const includeAllBox = document.getElementById('include-all');
+const feOnlyBox     = document.getElementById('fe-only');
+
+function syncToggleUi() {
+  hideMegasBox.checked  = hideMegas;
+  includeAllBox.checked = includeAll;
+  feOnlyBox.checked     = feOnly;
+  // "Fully evolved only" has nothing to do in the curated Champions list.
+  document.getElementById('fe-only-wrap').style.display = includeAll ? '' : 'none';
+}
+
+function onToggleChange() {
+  savePrefs();
+  syncToggleUi();
   // Re-run the last search in place (data is cached) if results are showing
   if (document.getElementById('ml-results').style.display === 'block') {
     runSearch({ listAll: lastListAll, scroll: false });
   }
+}
+
+hideMegasBox.addEventListener('change', e => { hideMegas = e.target.checked; onToggleChange(); });
+feOnlyBox.addEventListener('change',    e => { feOnly    = e.target.checked; onToggleChange(); });
+includeAllBox.addEventListener('change', e => {
+  includeAll = e.target.checked;
+  ensureAbilityNames(); // widen (or narrow) the ability autocomplete for the new scope
+  onToggleChange();
 });
+
+syncToggleUi();
+
 const hasFilters = () =>
   selectedMoves.length > 0 || selectedAbility || selectedTypes.length > 0;
 
