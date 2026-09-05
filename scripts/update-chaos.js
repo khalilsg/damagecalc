@@ -35,6 +35,7 @@
 import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname }            from 'path';
 import { fileURLToPath }            from 'url';
+import { gunzipSync }               from 'zlib';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR   = join(__dirname, '..', 'public', 'data', 'chaos');
@@ -69,7 +70,7 @@ async function discoverVgcPrefixes(month) {
   const res = await fetch(dirUrl);
   if (!res.ok) throw new Error(`directory listing ${dirUrl} → HTTP ${res.status}`);
   const html = await res.text();
-  const found = [...html.matchAll(/href="(gen9championsvgc[^"]*?)-0\.json"/g)]
+  const found = [...html.matchAll(/href="(gen9championsvgc[^"]*?)-0\.json(?:\.gz)?"/g)]
     .map((m) => m[1]);
   return [...new Set(found)].sort();
 }
@@ -120,12 +121,20 @@ if (prefix) {
 let written = 0;
 
 for (const p of prefixes) {
-  const url = `https://www.smogon.com/stats/${month}/chaos/${p}-0.json`;
-  process.stdout.write(`Fetching ${url} ... `);
+  // Smogon serves gzip-compressed stats (.json.gz) as of mid-2026; fall back
+  // to plain .json in case a future month reverts to uncompressed.
+  const gzUrl  = `https://www.smogon.com/stats/${month}/chaos/${p}-0.json.gz`;
+  const rawUrl = `https://www.smogon.com/stats/${month}/chaos/${p}-0.json`;
+  process.stdout.write(`Fetching ${gzUrl} ... `);
 
   let raw;
   try {
-    const res = await fetch(url);
+    let res = await fetch(gzUrl);
+    let gzipped = true;
+    if (res.status === 404) {
+      gzipped = false;
+      res = await fetch(rawUrl);
+    }
     if (!res.ok) {
       if (res.status === 404) {
         console.log(`SKIP (404 — not available for ${month})`);
@@ -133,7 +142,12 @@ for (const p of prefixes) {
       }
       throw new Error(`HTTP ${res.status}`);
     }
-    raw = await res.json();
+    if (gzipped) {
+      const buf = Buffer.from(await res.arrayBuffer());
+      raw = JSON.parse(gunzipSync(buf).toString('utf-8'));
+    } else {
+      raw = await res.json();
+    }
   } catch (e) {
     console.log(`ERROR: ${e.message}`);
     continue;
